@@ -30,7 +30,7 @@ avalon.shadowCopy(avalon, {
             return a === 'true'
         }
     },
-    version: "2.08",
+    version: "2.09",
     slice: function (nodes, start, end) {
         return _slice.call(nodes, start, end)
     },
@@ -38,6 +38,9 @@ avalon.shadowCopy(avalon, {
         //读写删除元素节点的样式
         if (node instanceof avalon) {
             node = node[0]
+        }
+        if(node.nodeType !==1){
+            return
         }
         var prop = avalon.camelize(name)
         name = avalon.cssName(prop) || prop

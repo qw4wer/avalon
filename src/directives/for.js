@@ -6,15 +6,17 @@ var rforSplit = /\s*,\s*/
 var rforAs = /\s+as\s+([$\w]+)/
 var rident = require('../seed/regexp').ident
 var update = require('./_update')
-
+var Cache = require('../seed/cache')
+var forCache = new Cache(128)
 var rinvalid = /^(null|undefined|NaN|window|this|\$index|\$id)$/
-function getTrackKey(item) {
+function getTraceKey(item) {
     var type = typeof item
     return item && type === 'object' ? item.$hashcode : type + ':' + item
 }
-
+//IE6-8,function后面没有空格
+var rfunction = /^\s*function\s*\(([^\)]+)\)/
 avalon._each = function (obj, fn, local) {
-    var str = (fn + "").match(/function\s+\(([^\)]+)\)/)
+    var str = (fn + "").match(rfunction)
     var args = str[1]
     var arr = args.match(avalon.rword)
     if (Array.isArray(obj)) {
@@ -30,7 +32,7 @@ avalon._each = function (obj, fn, local) {
     }
 }
 function iterator(index, item, vars, fn, k1, k2, isArray) {
-    var key = isArray ? getTrackKey(item) : index
+    var key = isArray ? getTraceKey(item) : index
     var local = {}
     local[k1] = index
     local[k2] = item
@@ -99,6 +101,7 @@ avalon.directive('for', {
             }
             return ''
         })
+        
         var arr = str.replace(rforPrefix, '').split(' in ')
         var assign = 'var loop = ' + avalon.parseExpr(arr[1]) + ' \n'
         var assign2 = 'var ' + pre.signature + ' = vnodes[vnodes.length-1]\n'
@@ -120,22 +123,23 @@ avalon.directive('for', {
     diff: function (current, previous, steps, __index__) {
         var cur = current[__index__]
         var pre = previous[__index__] || {}
+        
         //2.0.7不需要cur.start
         var nodes = current.slice(__index__, cur.end)
         cur.items = nodes.slice(1, -1)
 
         prepareCompare(cur.items, cur)
         delete pre.forDiff
+      
         if (cur.compareText === pre.compareText) {
             avalon.shadowCopy(cur, pre)
             return
         }
-
-        cur.forDiff = true
-
-        var isInit = !('items' in pre)
+        
+        cur.forDiff = true        
         var i, c, p
-        if (isInit) {
+        if (!('items' in pre)) {
+            cur.action = 'init'
             var _items = getRepeatRange(previous, __index__)
             pre.items = _items.slice(1, -1)
             pre.components = []
@@ -143,8 +147,11 @@ avalon.directive('for', {
         }
 
         cur.endRepeat = pre.endRepeat
-
+        if(!pre.repeatCount){
+            pre.repeatCount = pre.items.length
+        }
         var n = Math.max(nodes.length - 2, 0) - pre.repeatCount
+
         //让循环区域在新旧vtree里对齐
         if (n > 0) {
             var spliceArgs = [__index__ + 1, 0]
@@ -155,9 +162,7 @@ avalon.directive('for', {
         } else if (n < 0) {
             previous.splice.apply(previous, [__index__, Math.abs(n)])
         }
-
-        cur.action = isInit ? 'init' : 'update'
-        if (isInit) {
+        if ( cur.action === 'init') {
             /* eslint-disable no-cond-assign */
             var cache = cur.cache = {}
             for (i = 0; c = cur.components[i]; i++) {
@@ -226,7 +231,7 @@ avalon.directive('for', {
         var endRepeat = vnode.endRepeat
         var key = vnode.signature
         var DOMs = getDOMs(startRepeat.nextSibling, endRepeat, key)
-        if (DOMs.length === 0) {
+        if (DOMs.length === 0 ||   vnode.action == 'init' ) {
             DOMs.all.forEach(function (el) {
                 parent.removeChild(el)
             })
@@ -296,8 +301,9 @@ avalon.directive('for', {
                 break
             }
         }
-        var items = vnode.items
-
+       
+        var items = vnode.items|| []
+       
         var steps = vnode.steps
         var oldCount = steps.count
         vnode.repeatCount = items.length

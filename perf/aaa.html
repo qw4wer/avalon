@@ -1,27 +1,35 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>TODO supply a title</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <script src="../dist/avalon.test.js"></script>
-        <script>
-            vm = avalon.define({
-                $id: 'widget2',
-                panelBody: '这是面板的内容',
-                aaa: {
-                    ms_button: {
-                        buttonText: "vm中的值"
-                    }
-                }
-            })
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>测试页面</title>
+    <script type="text/javascript" src="../dist/avalon.js"></script>
+    <script>
+        var vm = avalon.define({
+            $id: 'test'
+        })
 
-        </script>
-    </head>
+        avalon.component('ms-div', {
+            template: (function(){
+                /*$##$
+                 <div ms-css="{width:@width?@width+2+'px':''}">
+                     <div ms-css="{width:@width?@width+1+'px':''}">
+                        测试内容
+                     </div>
+                 </div>
+                 $##$*/
+            }).toString().split("$##$")[1],
+            defaults: {
+                width:"" //如果是"" null true false 就会报错
+            }
+        });
+    </script>
+</head>
 
-    <body>
-        <div ms-controller='widget2' >
-            <xmp ms-widget="[{is:'ms-panel'}, @aaa]" style='border:1px solid red;display:block'>{{@panelBody}}</xmp>
-        </div>
-    </body>
+<body ms-controller="test">
+<!--在自定义标签中，ms-widget不是必须的-->
+<!--下面三种方式，ms-widget才是存在，其中的is也是必须的-->
+<xmp ms-widget='[{is:"ms-div"}]'></xmp>
+<wbr ms-widget='[{is:"ms-div"}]'/>
+</body>
 </html>

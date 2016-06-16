@@ -1,4 +1,4 @@
-/*! built in 2016-6-13:2 version 2.08 by 司徒正美 */
+/*! built in 2016-6-15:18 version 2.09 by 司徒正美 */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -71,7 +71,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ 104:
 /***/ function(module, exports, __webpack_require__) {
 
-	/*! built in 2016-6-13:2 version 2.08 by 司徒正美 */
+	/*! built in 2016-6-15:18 version 2.09 by 司徒正美 */
 	(function webpackUniversalModuleDefinition(root, factory) {
 		if(true)
 			module.exports = factory();
@@ -752,7 +752,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		            return a === 'true'
 		        }
 		    },
-		    version: "2.08",
+		    version: "2.09",
 		    slice: function (nodes, start, end) {
 		        return _slice.call(nodes, start, end)
 		    },
@@ -760,6 +760,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		        //读写删除元素节点的样式
 		        if (node instanceof avalon) {
 		            node = node[0]
+		        }
+		        if(node.nodeType !==1){
+		            return
 		        }
 		        var prop = avalon.camelize(name)
 		        name = avalon.cssName(prop) || prop
@@ -1743,8 +1746,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		                    dom.textContent = this.template
 		                    break
 		                default:
-		                    var a = avalon.parseHTML(this.template)
-		                    dom.appendChild(a)
+		                    if(!this.isVoidTag){
+		                       dom.appendChild(avalon.parseHTML(this.template))
+		                    }
 		                    break
 		            }
 
@@ -2567,15 +2571,14 @@ return /******/ (function(modules) { // webpackBootstrap
 		var rxhtml = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/ig
 
 		avalon.parseHTML = function (html) {
-		    var fragment = avalon.avalonFragment.cloneNode(false), firstChild
+		    var fragment = avalon.avalonFragment.cloneNode(false)
 		    //处理非字符串
 		    if (typeof html !== 'string') {
 		        return fragment
 		    }
 		    //处理非HTML字符串
 		    if (!rhtml.test(html)) {
-		        fragment.appendChild(document.createTextNode(html))
-		        return fragment
+		        return document.createTextNode(html)
 		    }
 
 		    html = html.replace(rxhtml, '<$1></$2>').trim()
@@ -2839,7 +2842,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 
 		var reventNames = /[^\s\?]+/g
-		var last = +new Date()
 		var typeRegExp = {}
 		function collectHandlers(elem, type, handlers) {
 		    var value = elem.getAttribute('avalon-events')
@@ -2865,7 +2867,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		}
 		var rhandleHasVm = /^e/
-		var rneedSmooth = /move|scroll/
 		function dispatch(event) {
 		    event = new avEvent(event)
 		    var type = event.type
@@ -2885,15 +2886,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		                if (vm && vm.$hashcode === false) {
 		                    return avalon.unbind(elem, type, fn)
 		                }
-		                if (rneedSmooth.test(type)) {
-		                    var curr = +new Date()
-		                    if (curr - last > 16) {
-		                        var ret = fn.call(vm || elem, event, host._ms_local)
-		                        last = curr
-		                    }
-		                } else {
-		                   ret = fn.call(vm || elem, event, host._ms_local)
-		                }
+		   
+		                var ret = fn.call(vm || elem, event, host._ms_local)
+		                
 		                if(ret === false){
 		                    event.preventDefault()
 		                    event.stopPropagation()
@@ -3584,7 +3579,10 @@ return /******/ (function(modules) { // webpackBootstrap
 		            update(cur, this.update, steps, 'visible' )
 		        }
 		    },
-		    update: function (node, vnode) {
+		    update: function (node, vnode) { 
+		        if(!node || node.nodeType !== 1){
+		            return
+		        }
 		        var show = vnode['ms-visible']
 		        var display = node.style.display
 		        var value
@@ -5089,9 +5087,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 
 		function callback(data) {
-		    if (data.validator) {
-		        avalon.directives.validate.validate(data, false)
-		    }
+		//    if (data.validator) {
+		//        avalon.directives.validate.validate(data, false)
+		//    }
 		    if (data.callback) {
 		        data.callback.call(data.vmodel, {
 		            type: 'changed',
@@ -5238,7 +5236,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		            }
 		            cur[name] = validator
 		            for(var name in dir.defaults){
-		                if(!validator[name]){
+		                if(!validator.hasOwnProperty(name)){
 		                    validator[name] = dir.defaults[name]
 		                }
 		            }
@@ -5732,15 +5730,17 @@ return /******/ (function(modules) { // webpackBootstrap
 		var rforAs = /\s+as\s+([$\w]+)/
 		var rident = __webpack_require__(43).ident
 		var update = __webpack_require__(36)
-
+		var Cache = __webpack_require__(28)
+		var forCache = new Cache(128)
 		var rinvalid = /^(null|undefined|NaN|window|this|\$index|\$id)$/
-		function getTrackKey(item) {
+		function getTraceKey(item) {
 		    var type = typeof item
 		    return item && type === 'object' ? item.$hashcode : type + ':' + item
 		}
-
+		//IE6-8,function后面没有空格
+		var rfunction = /^\s*function\s*\(([^\)]+)\)/
 		avalon._each = function (obj, fn, local) {
-		    var str = (fn + "").match(/function\s+\(([^\)]+)\)/)
+		    var str = (fn + "").match(rfunction)
 		    var args = str[1]
 		    var arr = args.match(avalon.rword)
 		    if (Array.isArray(obj)) {
@@ -5756,7 +5756,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		    }
 		}
 		function iterator(index, item, vars, fn, k1, k2, isArray) {
-		    var key = isArray ? getTrackKey(item) : index
+		    var key = isArray ? getTraceKey(item) : index
 		    var local = {}
 		    local[k1] = index
 		    local[k2] = item
@@ -5825,6 +5825,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		            }
 		            return ''
 		        })
+		        
 		        var arr = str.replace(rforPrefix, '').split(' in ')
 		        var assign = 'var loop = ' + avalon.parseExpr(arr[1]) + ' \n'
 		        var assign2 = 'var ' + pre.signature + ' = vnodes[vnodes.length-1]\n'
@@ -5846,22 +5847,23 @@ return /******/ (function(modules) { // webpackBootstrap
 		    diff: function (current, previous, steps, __index__) {
 		        var cur = current[__index__]
 		        var pre = previous[__index__] || {}
+		        
 		        //2.0.7不需要cur.start
 		        var nodes = current.slice(__index__, cur.end)
 		        cur.items = nodes.slice(1, -1)
 
 		        prepareCompare(cur.items, cur)
 		        delete pre.forDiff
+		      
 		        if (cur.compareText === pre.compareText) {
 		            avalon.shadowCopy(cur, pre)
 		            return
 		        }
-
-		        cur.forDiff = true
-
-		        var isInit = !('items' in pre)
+		        
+		        cur.forDiff = true        
 		        var i, c, p
-		        if (isInit) {
+		        if (!('items' in pre)) {
+		            cur.action = 'init'
 		            var _items = getRepeatRange(previous, __index__)
 		            pre.items = _items.slice(1, -1)
 		            pre.components = []
@@ -5869,8 +5871,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		        }
 
 		        cur.endRepeat = pre.endRepeat
-
+		        if(!pre.repeatCount){
+		            pre.repeatCount = pre.items.length
+		        }
 		        var n = Math.max(nodes.length - 2, 0) - pre.repeatCount
+
 		        //让循环区域在新旧vtree里对齐
 		        if (n > 0) {
 		            var spliceArgs = [__index__ + 1, 0]
@@ -5881,9 +5886,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		        } else if (n < 0) {
 		            previous.splice.apply(previous, [__index__, Math.abs(n)])
 		        }
-
-		        cur.action = isInit ? 'init' : 'update'
-		        if (isInit) {
+		        if ( cur.action === 'init') {
 		            /* eslint-disable no-cond-assign */
 		            var cache = cur.cache = {}
 		            for (i = 0; c = cur.components[i]; i++) {
@@ -5952,7 +5955,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		        var endRepeat = vnode.endRepeat
 		        var key = vnode.signature
 		        var DOMs = getDOMs(startRepeat.nextSibling, endRepeat, key)
-		        if (DOMs.length === 0) {
+		        if (DOMs.length === 0 ||   vnode.action == 'init' ) {
 		            DOMs.all.forEach(function (el) {
 		                parent.removeChild(el)
 		            })
@@ -6022,8 +6025,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		                break
 		            }
 		        }
-		        var items = vnode.items
-
+		       
+		        var items = vnode.items|| []
+		       
 		        var steps = vnode.steps
 		        var oldCount = steps.count
 		        vnode.repeatCount = items.length
@@ -8611,7 +8615,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ 107:
 /***/ function(module, exports) {
 
-	module.exports = "<div>\n    <div class=\"body\">\n        <slot name=\"body\"></slot>\n    </div>\n    <p><ms-button /></p>\n</div>"
+	module.exports = "<div>\r\n    <div class=\"body\">\r\n        <slot name=\"body\"></slot>\r\n    </div>\r\n    <p><ms-button /></p>\r\n</div>"
 
 /***/ }
 
