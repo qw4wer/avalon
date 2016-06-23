@@ -1,8 +1,9 @@
-module.exports = function (cur, update, steps,  type, hookName) {
-    hookName = hookName || 'change'
-    var list = cur[hookName] || (cur[hookName] = [])
-    if (avalon.Array.ensure(list, update)) {
-        steps.count += 1
-        avalon.config.showDiff && avalon.log(type+ ' change')
+module.exports = function (vdom, update, hookName) {
+    if (hookName) {
+        vdom.afterChange = vdom.afterChange || []
+        avalon.Array.ensure(vdom.afterChange, update)
+    } else {
+        var dom = vdom.dom
+        update(vdom.dom, vdom, dom && dom.parentNode)
     }
 }

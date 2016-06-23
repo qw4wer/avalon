@@ -23,13 +23,13 @@ function addTag(obj) {
     return add(stringify(obj))
 }
 
-function parseNodes(array) {
+function parseNodes(source, inner) {
     //ms-important， ms-controller ， ms-for 不可复制，省得死循环
     //ms-important --> ms-controller --> ms-for --> ms-widget --> ms-effect --> ms-if
-    var buffer = ['\nvar vnodes = [];']
-    var forstack = []
-    for (var i = 0, el; el = array[i++]; ) {
-        var vnode = parseNode(el, forstack)
+    var buffer = inner ? []: ['\nvar vnodes = [];'] 
+
+    for (var i = 0, el; el = source[i++]; ) {
+        var vnode = parseNode(el)
         if (el.$prepend) {
             buffer.push(el.$prepend)
         }
@@ -43,131 +43,116 @@ function parseNodes(array) {
             buffer.push(append)
         }
     }
-    buffer.push('return vnodes\n')
+    if (!inner) {
+        buffer.push('return vnodes\n')
+    }
     return buffer.join('\n')
 }
 
 
 
-function parseNode(pre, forstack, logic) {
+function parseNode(source) {
     var directives = avalon.directives
-    if (pre.nodeType === 3) {
-        if (config.rexpr.test(pre.nodeValue)) {
-            return add(stringifyText(pre))
+    if (source.nodeType === 3) {
+        if (config.rexpr.test(source.nodeValue)) {
+            return add(stringifyText(source))
         } else {
-            return addTag(pre)
+            return addTag(source)
         }
-    } else if (pre.nodeType === 1) {
-        var props = pre.props
-        if (pre.type.indexOf('ms-') === 0) {
-            if (!props['ms-widget']) {
-                props['ms-widget'] = '{is:' + quote(pre.type) + '}'
-            }
-        }
+    } else if (source.nodeType === 1) {
 
-        var cur = {
+        var copy = {
             props: {},
-            type: pre.type,
+            type: source.type,
             nodeType: 1,
             template: ''
         }
-        var bindings = extractBindings(cur, props)
-        if (!bindings.length) {
-            cur.skipAttrs = true
-        }
-
-        cur.order = bindings.map(function (b) {
-            //将ms-*的值变成函数,并赋给cur.props[ms-*]
-            //如果涉及到修改结构,则在pre添加$append,$prepend
-            directives[b.type].parse(cur, pre, b)
+        var bindings = extractBindings(copy, source.props)
+        copy.order = bindings.map(function (b) {
+            //将ms-*的值变成函数,并赋给copy.props[ms-*]
+            //如果涉及到修改结构,则在source添加$append,$prepend
+            directives[b.type].parse(copy, source, b)
             return b.name
 
         }).join(';;')
-        if (pre.directive === 'widget') {
-            cur.order = cur.order ? 'ms-widget;;' + cur.order : 'ms-widget'
-            cur.directive = 'widget'
-            cur.local = '__local__'
-            cur.vmodel = '__vmodel__'
-            cur.wid = avalon.quote(pre.props.wid)
-            delete cur.skipAttrs
-        }
-        if (pre.isVoidTag) {
-            cur.isVoidTag = true
-            cur.skipContent = true
+
+        if (source.isVoidTag) {
+            copy.isVoidTag = true
         } else {
-            if (!('children' in cur)) {
-                var pChildren = pre.children
-                if (pChildren.length && !pre.skipContent) {
-                    cur.children = '(function(){' + parseNodes(pChildren) + '})()'
+            if (!('children' in copy)) {
+                
+                var pChildren = source.children
+                if (pChildren.length) {
+                    delete source.template
+                    copy.children = '(function(){' + parseNodes(pChildren) + '})()'
                 } else {
-                    cur.template = pre.template
-                    cur.children = '[]'
-                    cur.skipContent = true
+                    copy.template = source.template
+                    copy.children = '[]'
                 }
             }
         }
+        if(source.skipContent)
+            copy.skipContent = true
+        if(source.skipAttrs)
+            copy.skipAttrs = true
 
-        return addTag(cur)
+        return addTag(copy)
 
-    } else if (pre.nodeType === 8) {
-        var nodeValue = pre.nodeValue
+    } else if (source.nodeType === 8) {
+        var nodeValue = source.nodeValue
         if (rmsFor.test(nodeValue)) {// 处理ms-for指令
             if (nodeValue.indexOf('ms-for:') !== 0) {
                 avalon.error('ms-for指令前不能有空格')
             }
-            forstack.push(pre)
-            var cur = {
+            var copy = {
                 directive: 'for',
                 vmodel: '__vmodel__'
             }
-            for(var i in pre){
-                if(pre.hasOwnProperty(i)){
-                    cur[i] = pre[i]
+            for (var i in source) {
+                if (source.hasOwnProperty(i)) {
+                    copy[i] = source[i]
                 }
             }
-           
-            directives['for'].parse(cur, pre, pre)
 
-            return addTag(cur)
+            directives['for'].parse(copy, source, source)
+
+            return addTag(copy)
 
         } else if (rmsForEnd.test(nodeValue)) {
-            var node = forstack[forstack.length - 1]
-            var signature = node.signature
             if (nodeValue.indexOf('ms-for-end:') !== 0) {
                 avalon.error('ms-for-end指令前不能有空格')
             }
-            pre.$append = addTag({
+            source.$append = addTag({
                 nodeType: 8,
                 type: '#comment',
-                nodeValue: signature,
+                nodeValue: source.signature,
                 key: 'traceKey'
-            }) + '\n' //结束循环
-                    + "\n},__local__)"
-            if (forstack.length) {
-                pre.$append += "\n" + signature + '.end =' +
-                        addTag({
-                            nodeType: 8,
-                            type: "#comment",
-                            signature: signature,
-                            nodeValue: "ms-for-end:"
-                        }) + '\n'
-                forstack.pop()
-            }
+            }) +
+                    '\n},__local__,vnodes)\n' +
+                    addTag({
+                        nodeType: 8,
+                        type: "#comment",
+                        signature: source.signature,
+                        nodeValue: "ms-for-end:"
+                    }) + '\n'
+
             return ''
         } else if (nodeValue.indexOf('ms-js:') === 0) {//插入JS声明语句
             var statement = parseExpr(nodeValue.replace('ms-js:', ''), 'js') + '\n'
-            var ret = addTag(pre)
+            var ret = addTag(source)
             var match = statement.match(rstatement)
             if (match && match[1]) {
-                pre.$append = (pre.$append || '') + statement +
+                source.$append = (source.$append || '') + statement +
                         "\n__local__." + match[1] + ' = ' + match[1] + '\n'
-            }else{
-                avalon.warn(nodeValue+' parse fail!')
+            } else {
+                avalon.warn(nodeValue + ' parse fail!')
             }
             return ret
         } else {
-            return addTag(pre)
+            return addTag(source)
         }
+    } else if (Array.isArray(source)) {
+        source.$append = parseNodes(source, true)
     }
 }
 var rstatement = /^\s*var\s+([$\w]+)\s*\=\s*\S+/
@@ -183,7 +168,7 @@ function stringifyText(el) {
         }).join(' + ')
         nodeValue = 'String(' + token + ')'
     }
-    return '{\ntype: "#text",\nnodeType:3,\nfixIESkip: true,\nnodeValue: ' + nodeValue + '\n}'
+    return '{\ntype: "#text",\nnodeType:3,\nnodeValue: ' + nodeValue + '\n}'
 }
 
 module.exports = parseNodes

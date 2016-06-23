@@ -1,41 +1,43 @@
 var update = require('./_update')
 var parseView = require('../strategy/parser/parseView')
+var reconcile = require('../strategy/reconcile')
 
-avalon.htmlFactory = function (str, vm, local) {
-    var vtree = avalon.lexer(str + "")
-    var e = avalon.render(vtree)
-    return  e(vm, local)
-}
 
 avalon.directive('html', {
-    parse: function (cur, pre, binding) {
-        if (!pre.isVoidTag) {
-            //将渲染函数的某一部分存起来,渲在c方法中转换为函数
-            cur[binding.name] = avalon.parseExpr(binding)
-            delete pre.children
-            cur.children = 'avalon.htmlFactory(' + avalon.parseExpr(binding) + ',__vmodel__,__local__)'
-        }else{
-            cur.children = '[]'
-        }
-    },
-    diff: function (cur, pre, steps, name) {
-        var curValue = cur[name]
-        var preValue = pre[name]
+    parse: function (copy, src, binding) {
 
-        if (curValue !== preValue) {
-            update(cur, this.update, steps, 'html')
+        if (!src.isVoidTag) {
+            //将渲染函数的某一部分存起来,渲在c方法中转换为函数
+            copy[binding.name] = avalon.parseExpr(binding)
+            copy.vmodel = '__vmodel__'
+            copy.local = '__local__'
+        } else {
+            copy.children = '[]'
         }
     },
-    update: function (node, vnode) {
-        if (node.nodeType !== 1) {
-            return
+    diff: function (copy, src, name) {
+        var copyValue = copy[name] + ''
+        if (copyValue !== src[name]) {
+            src[name] = copyValue
+            var oldTree = avalon.lexer(copyValue)
+            avalon.speedUp(oldTree)
+            src.children = oldTree
+            var render = avalon.render(oldTree)
+            src.render = render
+            var newTree = render(copy.vmodel, copy.local)
+            copy.children = newTree
+            update(src, this.update)
+        } else {
+            var newTree = src.render(copy.vmodel, copy.local)
+            copy.children = newTree
         }
-        //添加节点
-        avalon.clearHTML(node)
-        var fragment = document.createDocumentFragment()
-        vnode.children.forEach(function (c) {
-            c && fragment.appendChild(avalon.vdomAdaptor(c, 'toDOM'))
-        })
-        node.appendChild(fragment)
+    },
+
+    update: function (dom, vdom, parent) {
+        avalon.clearHTML(dom)
+        var f = avalon.vdomAdaptor(vdom.children)
+        reconcile(f.childNodes, vdom.children, f)
+        dom.appendChild(f)
+
     }
 })

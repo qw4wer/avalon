@@ -2,34 +2,20 @@ var rident = require('../seed/regexp').ident
 var update = require('./_update')
 
 avalon.directive('text', {
-    parse: function (cur, pre, binding) {
-        cur.children = '[{nodeType:3,type:"#text",nodeValue:""}]'
-        cur.skipContent = true
+    parse: function (copy, src, binding) {
+        src.children = [{nodeType:3,type:"#text",dynamic: true, nodeValue:"dynamic"}]
+        copy.children = '[{nodeType:3,type:"#text", nodeValue:"dynamic"}]'
         var val = rident.test(binding.expr) ? binding.expr : avalon.parseExpr(binding)
-        cur[binding.name] = val
+        copy[binding.name] = val
     },
-    diff: function (cur, pre, steps, name) {
-        var curValue = cur[name]
-        var preValue = pre[name]
-        var dom = cur.dom = pre.dom
-        if (curValue !== preValue ) {
-            cur.children[0].nodeValue = curValue
-            if (dom) {
-                this.update(dom, cur)
-            } else {
-                update(cur, this.update, steps, 'text')
-            }
+    diff: function (copy, src, name) {
+        var copyValue = copy[name]+''
+        if (copyValue !== src[name] ) {
+            src[name] = copy.children[0].nodeValue = copyValue
+            update(src, this.update)
         }
-        pre.dom = null
-        return false
     },
-    update: function (node, vnode) {
-        var nodeValue = vnode['ms-text']
-        if ('textContent' in node) {
-            node.textContent = nodeValue + ''
-        } else {
-            node.innerText = nodeValue + ''
-        }
-        vnode.dom = node
+    update: function (dom, vdom) {
+        dom.innerText = dom.textContent = vdom['ms-text']
     }
 })

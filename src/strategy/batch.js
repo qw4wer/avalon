@@ -5,13 +5,13 @@
  * ------------------------------------------------------------
  */
 
-var patch = require('./patch')
-
+var reconcile = require('./reconcile')
 
 //如果正在更新一个子树,那么将它放到
 var needRenderIds = []
 var renderingID = false
 avalon.suspendUpdate = 0
+
 
 function batchUpdate(id) {
     if (renderingID) {
@@ -19,29 +19,40 @@ function batchUpdate(id) {
     } else {
         renderingID = id
     }
-    
+
     var scope = avalon.scopes[id]
     if (!scope || !document.nodeName || avalon.suspendUpdate) {
         return renderingID = null
     }
+    var vm = scope.vmodel
+    var dom = vm.$element
+    var source = dom.vtree || []
+    var renderFn = vm.$render
+    var copy = renderFn(scope.vmodel, scope.local)
+    if (!scope.isMount) {
+        //在最开始时,替换作用域的所有节点,确保虚拟DOM与真实DOM是对齐的
+        reconcile([dom], source, dom.parentNode)  
+        scope.isMount = 1
+    }
     
-    var dom = scope.dom
-    var steps = {count: 0}
-    var vtree = scope.render(scope.synth || scope.vmodel, scope.local)
+    avalon.diff(copy, source)
+    
+    if (scope.isMount === 1) {
+        var events = vm.$events["onReady"]
+        if (events) {
+            vm.fire('onReady')
+            delete vm.$events.onReady
+        }
+        scope.isMount = 2
+    }
 
-    avalon.diff(vtree, dom.vtree || [], steps)
-    patch([dom], vtree, null, steps)
-    steps.count = 0
-    dom.vtree = vtree
-    
-  
     var index = needRenderIds.indexOf(renderingID)
-    renderingID = null
+    renderingID = 0
     if (index > -1) {
         var removed = needRenderIds.splice(index, 1)
         return batchUpdate(removed[0])
     }
-    
+
     var more = needRenderIds.shift()
     if (more) {
         batchUpdate(more)

@@ -52,8 +52,8 @@ function createSVG(type) {
 }
 var svgTags = avalon.oneObject('circle,defs,ellipse,image,line,' +
         'path,polygon,polyline,rect,symbol,text,use,g,svg')
-var VMLTags = avalon.oneObject('shape,line,polyline,rect,roundrect,oval,arc,'+
-        'curve,background,image,shapetype,group,fill,'+
+var VMLTags = avalon.oneObject('shape,line,polyline,rect,roundrect,oval,arc,' +
+        'curve,background,image,shapetype,group,fill,' +
         'stroke,shadow, extrusion, textbox, imagedata, textpath')
 
 var rvml = /^\w+\:\w+/
@@ -69,6 +69,13 @@ VElement.prototype = {
         } else {
             dom = document.createElement(tagName)
         }
+        
+        if (this.wid) {
+            var scope = avalon.scopes[this.wid]
+            if (scope && scope.dom) {
+                return scope.dom
+            }
+        }
         for (var i in this.props) {
             var val = this.props[i]
             if (skipFalseAndFunction(val)) {
@@ -79,46 +86,32 @@ VElement.prototype = {
                 }
             }
         }
-        if (this.wid) {
-            var scope = avalon.scopes[this.wid]
-            if (scope && scope.dom) {
-                return scope.dom
-            }
-        }
-        if (this.skipContent) {
-            switch (this.type) {
-                case 'script':
-                    dom.text = this.template
-                    break
-                case 'style':
-                    if('styleSheet' in dom){
-                        dom.setAttribute('type', 'text/css')
-                        dom.styleSheet.cssText = this.template
-                    }else{
-                        dom.innerHTML = this.template
-                    }
-                    break
-                case 'template':
+        
+        switch (this.type) {
+            case 'script':
+                dom.text = this.template
+                break
+            case 'style':
+                if ('styleSheet' in dom) {
+                    dom.setAttribute('type', 'text/css')
+                    dom.styleSheet.cssText = this.template
+                } else {
                     dom.innerHTML = this.template
-                    break
-                case 'noscript':
-                    dom.textContent = this.template
-                    break
+                }
+                break
+            case 'template':
+                dom.innerHTML = this.template
+                break
+            case 'noscript':
+                dom.textContent = this.template
+                break
                 default:
-                    if(!this.isVoidTag){
-                       dom.appendChild(avalon.parseHTML(this.template))
-                    }
-                    break
-            }
-
-        } else if (!this.isVoidTag) {
-            if (this.children.length) {
-                this.children.forEach(function (c) {
-                    c && dom.appendChild(avalon.vdomAdaptor(c, 'toDOM'))
-                })
-            } else {
-                dom.appendChild(avalon.parseHTML(this.template))
-            }
+                if (!this.isVoidTag) {
+                    this.children.forEach(function (c) {
+                        c && dom.appendChild(avalon.vdomAdaptor(c, 'toDOM'))
+                    })
+                }
+                break
         }
         return dom
     },

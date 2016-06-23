@@ -2,19 +2,18 @@ var updateModelMethods = {
     input: function (prop) {//处理单个value值处理
         var data = this
         prop = prop || 'value'
-        var rawValue = data.element[prop]
-        var formatedValue = data.format(data.vmodel, rawValue)
-        if (formatedValue !== rawValue) {
-            data.formatedValue = formatedValue
-            data.element[prop] = formatedValue
-        }
+        var rawValue = data.dom[prop]
         
-        var parsedValue = data.parse(formatedValue)
+        var parsedValue = data.parse(rawValue)
+        var formatedValue = data.format(data.vmodel, parsedValue)
+        //有时候parse后一致,vm不会改变,但input里面的值
         if (parsedValue !== data.modelValue) {
             data.set(data.vmodel, parsedValue)
             callback(data)
         }
-
+        
+        data.dom[prop] = formatedValue
+        
         //vm.aaa = '1234567890'
         //处理 <input ms-duplex='@aaa|limitBy(8)'/>{{@aaa}} 这种格式化同步不一致的情况 
 
@@ -22,7 +21,7 @@ var updateModelMethods = {
     radio: function () {
         var data = this
         if (data.isChecked) {
-            var val = data.modelValue = !data.modelValue
+            var val = !data.modelValue
             data.set(data.vmodel, val)
             callback(data)
         } else {
@@ -36,10 +35,10 @@ var updateModelMethods = {
             avalon.warn('ms-duplex应用于checkbox上要对应一个数组')
             array = [array]
         }
-        var method = data.element.checked ? 'ensure' : 'remove'
+        var method = data.dom.checked ? 'ensure' : 'remove'
         
         if (array[method]) {
-            var val = data.parse(data.element.value)
+            var val = data.parse(data.dom.value)
             array[method](val)
             callback(data)
         }
@@ -47,7 +46,7 @@ var updateModelMethods = {
     },
     select: function () {
         var data = this
-        var val = avalon(data.element).val() //字符串或字符串数组
+        var val = avalon(data.dom).val() //字符串或字符串数组
         if (val + '' !== this.modelValue + '') {
             if (Array.isArray(val)) { //转换布尔数组或其他
                 val = val.map(function (v) {
@@ -56,7 +55,6 @@ var updateModelMethods = {
             } else {
                 val = data.parse(val)
             }
-            data.modelValue = val
             data.set(data.vmodel, val)
             callback(data)
         }
@@ -67,13 +65,10 @@ var updateModelMethods = {
 }
 
 function callback(data) {
-//    if (data.validator) {
-//        avalon.directives.validate.validate(data, false)
-//    }
     if (data.callback) {
         data.callback.call(data.vmodel, {
             type: 'changed',
-            target: data.element
+            target: data.dom
         })
     }
 }

@@ -6,7 +6,7 @@
  */
 var emptyArr = []
 // 防止被引用
-var emptyObj = function() {
+var emptyObj = function () {
     return {
         children: [], props: {}
     }
@@ -14,58 +14,73 @@ var emptyObj = function() {
 var directives = avalon.directives
 var rbinding = require('../seed/regexp').binding
 
-function diff(current, previous, steps) {
-    if (!current)
-        return
-    for (var i = 0; i < current.length; i++) {
-        var cur = current[i]
-        var pre = previous[i] || emptyObj()
-        switch (cur.nodeType) {
+function diff(copys, sources) {
+    for (var i = 0; i < copys.length; i++) {
+        var copy = copys[i]
+        var src = sources[i] || emptyObj()
+    
+        switch (copy.nodeType) {
             case 3:
-                if (!cur.skipContent) {
-                    directives.expr.diff(cur, pre, steps)
+                if (!copy.skipContent) {
+                    directives.expr.diff(copy, src)
                 }
                 break
             case 8:
-                if (cur.directive === 'for' ) {
-                    var forDiff = directives['for'].diff(current, previous, steps, i)
-                    if(typeof forDiff === 'number'){
-                        i = forDiff
-                    }
-                } else if (cur.directive ) {//if widget
-                    directives[cur.directive].diff(cur, pre, steps)
+                if (copy.directive) {
+                    directives[copy.directive].diff(copy, src,
+                    copys[i+1],sources[i+1],sources[i+2]) 
+                }
+                if(src.afterChange){
+                    execHooks(src, src.afterChange)
                 }
                 break
-            default:
-                if (!cur.skipAttrs) {
-                    diffProps(cur, pre, steps)
+            case 1:
+                if (!copy.skipAttrs) {
+                    diffProps(copy, src)
                 }
-                if (!cur.skipContent) {
-                    diff(cur.children, pre.children || emptyArr, steps)
+                if (!copy.skipContent && !copy.isVoidTag ) {
+                    diff(copy.children, src.children || emptyArr, copy)
+                }
+                if(src.afterChange){
+                    execHooks(src, src.afterChange)
+                }
+                break
+            default: 
+                if(Array.isArray(copy)){
+                   diff(copy, src)
                 }
                 break
         }
     }
 }
 
-function diffProps(current, previous, steps) {
-    if (current.order) {
+function execHooks(el, hooks) {
+    if (hooks.length) {
+        for (var hook, i = 0; hook = hooks[i++];) {
+           hook(el.dom, el)
+        }
+    }
+    delete el.afterChange
+}
+
+function diffProps(copys, sources) {
+    if (copys.order) {
         var directiveType
         try {
-            current.order.replace(/([^;]+)/g, function (name) {
+            copys.order.replace(/([^;]+)/g, function (name) {
                 var match = name.match(rbinding)
                 var type = match && match[1]
                 directiveType = type
                 if (directives[type]) {
-                    directives[type].diff(current, previous || emptyObj(), steps, name)
+                    directives[type].diff(copys, sources || emptyObj(), name)
                 }
                 return name
             })
         } catch (e) {
-            avalon.log(directiveType, e, e.message,'diffProps error')
+            avalon.log(directiveType, e, e.message, 'diffProps error')
         }
     }
-    
+
 
 }
 avalon.diffProps = diffProps

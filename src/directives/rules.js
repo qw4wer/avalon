@@ -1,11 +1,13 @@
 avalon.directive('rules', {
-     parse: function (cur, pre, binding) {
+     parse: function (copy, src, binding) {
         var rules = binding.expr
         if (/{.+}/.test(rules)) {
-           cur[binding.name] = avalon.parseExpr(binding)
+           copy[binding.name] = avalon.parseExpr(binding)
         }
     },
-    diff: avalon.noop
+    diff: function(copy, src, name){
+        src[name] = copy[name]
+    }
 })
 function isRegExp(value) {
     return avalon.type(value) === 'regexp'

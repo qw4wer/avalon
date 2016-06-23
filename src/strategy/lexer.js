@@ -22,8 +22,8 @@ var rtext = /^[^<]+/
 var rcomment = /^<!--([\w\W]*?)-->/
 
 var rnumber = /\d+/g
-var rspAfterForStart = /^\s*ms-for\:/
-var rspBeforeForEnd = /^\s*ms-for-end\:/
+var rmsForStart = /^\s*ms\-for\:/
+var rmsForEnd = /^\s*ms\-for\-end/
 var r = require('../seed/regexp')
 var rsp = r.sp
 var rfill = /\?\?\d+/g
@@ -49,18 +49,12 @@ var rhasString = /=["']/
 var rlineSp = /\n\s*/g
 function fixLongAttrValue(attr) {
     return rhasString.test(attr) ?
-            attr.replace(rlineSp, '').replace(rstring, dig) : attr
+        attr.replace(rlineSp, '').replace(rstring, dig) : attr
 }
-function lexer(text, curDeep, maxDeep) {
+function lexer(text, curDeep) {
     var nodes = []
-    maxDeep = maxDeep || 1
     if (typeof curDeep !== 'number') {
         curDeep = 0
-    } else {
-        curDeep = curDeep + 1
-    }
-    if (curDeep >= maxDeep && !config.rbind.test(text)) {
-        return nodes
     }
     if (!curDeep) {
         text = text.replace(rstring, dig)
@@ -71,23 +65,25 @@ function lexer(text, curDeep, maxDeep) {
         var match = text.match(rtext)
         if (match) {//尝试匹配文本
             outerHTML = match[0]
-            node = new VText(outerHTML.replace(rfill, fill))
+            node = {
+                type: '#text',
+                nodeType: 3,
+                nodeValue: outerHTML.replace(rfill, fill)
+            }
+
         }
 
         if (!node) {//尝试匹配注释
             match = text.match(rcomment)
             if (match) {
                 outerHTML = match[0]
-                node = new VComment(match[1].replace(rfill, fill))
-                var nodeValue = node.nodeValue
-                if (rspBeforeForEnd.test(nodeValue)) {
-                    var sp = nodes[nodes.length - 1]
-                    //移除紧挨着<!--ms-for-end:xxxx-->前的空白节点
-                    if (sp && sp.nodeType === 3 && rsp.test(sp.nodeValue)) {
-                        nodes.pop()
-                    }
-                    getForTemplate(nodes)
+                node = {
+                    type: '#comment',
+                    nodeType: 8,
+                    nodeValue: match[1].replace(rfill, fill)
                 }
+           
+                
             }
         }
 
@@ -107,7 +103,7 @@ function lexer(text, curDeep, maxDeep) {
                 }
 
                 var innerHTML = outerHTML.slice(match[0].length,
-                        (type.length + 3) * -1) //抽取innerHTML
+                    (type.length + 3) * -1) //抽取innerHTML
                 node = {
                     nodeType: 1,
                     type: type,
@@ -115,8 +111,8 @@ function lexer(text, curDeep, maxDeep) {
                     template: innerHTML.replace(rfill, fill).trim(),
                     children: []
                 }
-                node = modifyProps(node, innerHTML, nodes, curDeep, maxDeep)
-                
+                node = modifyProps(node, innerHTML, nodes, curDeep)
+
             }
         }
 
@@ -137,17 +133,24 @@ function lexer(text, curDeep, maxDeep) {
                     children: [],
                     isVoidTag: true
                 }
-                node = modifyProps(node, '', nodes, curDeep, maxDeep)
+                node = modifyProps(node, '', nodes, curDeep)
             }
         }
 
         if (node) {//从text中移除被匹配的部分
-            nodes.push(node)
+            if (node.nodeType !== 3 || /\S/.test(node.nodeValue)) {
+                nodes.push(node)
+            }
             text = text.slice(outerHTML.length)
-            if (node.nodeType === 8 && rspAfterForStart.test(node.nodeValue)) {
-                node.signature = makeHashCode('for')
-                //移除紧挨着<!--ms-for:xxxx-->后的空白节点
-                text = text.replace(rleftSp, '')
+            if (node.nodeType === 8){
+                if(rmsForStart.test(node.nodeValue)) {
+                    
+                   node.signature = node.signature || makeHashCode('for')
+                   node.directive = 'for'
+                }else if (rmsForEnd.test(node.nodeValue)) {
+                     //将 ms-for与ms-for-end:之间的节点塞到一个数组中
+                    markeRepeatRange(nodes, node)
+                }
             }
         } else {
             break
@@ -159,22 +162,31 @@ function lexer(text, curDeep, maxDeep) {
     return nodes
 }
 
-function getForTemplate(nodes){
-    var i = 1, el, k = nodes.length, ret = []
-    while(el = nodes[--k]){
-        if(el.nodeType === 8){
-            if(rspAfterForStart.test(el.nodeValue)){
-                i -= 1
-            }else if(rspBeforeForEnd.test(el.nodeValue)){
-                i += 1
-            }
-            if(i === 0){
-                break
-            }
+
+
+function markeRepeatRange(nodes, end) {
+    var el, k = nodes.length-1, toFilter = [], toRemove = k
+    while (el = nodes[--k]) {
+        if (el.nodeType === 8 && rmsForStart.test(el.nodeValue)) {
+            var start = el
+            end.signature = el.signature
+            break
         }
-        ret.push(avalon.vdomAdaptor(el, 'toHTML'))
+        toFilter.push(el)
     }
-    return el.template = ret.reverse().join('')
+    var toRepeat = toFilter.reverse().filter(function (el) {
+        if (el.nodeType === 3) {
+            return /\S+/.test(el.nodeValue)
+        } else {
+            return true
+        }
+    })
+
+    start.template = toRepeat.map(function (a) {
+        return avalon.vdomAdaptor(a, 'toHTML')
+    }).join('')
+
+    nodes.splice(k +1, toFilter.length, toRepeat)
 }
 
 //用于创建适配某一种标签的正则表达式
@@ -186,9 +198,9 @@ function clipOuterHTML(matchText, type) {
     var opens = []
     var closes = []
     var ropen = tagCache[type + 'open'] ||
-            (tagCache[type + 'open'] = new RegExp('<' + type + openStr, regArgs))
+        (tagCache[type + 'open'] = new RegExp('<' + type + openStr, regArgs))
     var rclose = tagCache[type + 'close'] ||
-            (tagCache[type + 'close'] = new RegExp('<\/' + type + '>', regArgs))
+        (tagCache[type + 'close'] = new RegExp('<\/' + type + '>', regArgs))
 
     /* jshint ignore:start */
     matchText.replace(ropen, function (_, b) {
@@ -222,78 +234,90 @@ function clipOuterHTML(matchText, type) {
         }
     }
     var findex = parseFloat(pos[last]) + type.length + 3 // (</>为三个字符)
-    return  matchText.slice(0, findex) //取得正确的outerHTML
+    return matchText.slice(0, findex) //取得正确的outerHTML
 }
 
 
-function modifyProps(node, innerHTML, nodes, curDeep, maxDeep) {
+function modifyProps(node, innerHTML, nodes, curDeep) {
     var type = node.type
-    if ('ms-skip' in node.props) {
-        node.skipContent = true
-    } else {
-        switch (type) {
-            case 'style':
-            case 'script':
-            case 'noscript':
-            case 'template':
-            case 'textarea':
-                node.skipContent = true
-                if (type === 'textarea') {
-                    node.props.type = 'textarea'
-                }
-                break
-            case 'input':
-                if (!node.props.type) {
-                    node.props.type = 'text'
-                }
-                break
-           case 'select':
-                if(node.props.hasOwnProperty('multiple')){
-                   node.props.multiple = 'multiple' 
-                   node.multiple = true
-                }
-                break
-            case 'xmp':
-                node.children.push(new VText(node.template))
-                break
-            case 'option':
-                node.children.push(new VText(trimHTML(node.template)))
-                break
-        }
-        if (!node.isVoidTag) {
-            var childs = lexer(innerHTML, curDeep, maxDeep)
-            node.children = childs
-            if (type === 'table') {
-                addTbody(node.children)
-            }
-        }
-        var forExpr = node.props['ms-for']
-        if (forExpr) {
-            var cb = node.props['data-for-rendered']
-            var cid = cb+':cb'
-            delete node.props['ms-for']
-            nodes.push({
-                nodeType: 8,
-                type: '#comment',
-                nodeValue: 'ms-for:' + forExpr,
-                signature: makeHashCode('for'),
-                cid: cid,
-                template: avalon.vdomAdaptor(node, 'toHTML')
-            })
-            
-            if(cb && !avalon.caches[cid]){
-                avalon.caches[cid] = Function('return '+ avalon.parseExpr(cb, 'on'))()  
-            }
+    var props = node.props
+    switch (type) {
+        case 'style':
+        case 'script':
+        case 'noscript':
+        case 'template':
+        case 'textarea':
+        case 'xmp':
+            node.skipContent = true
            
-            nodes.push(node)
-            return {
-                nodeType: 8,
-                skipContent: true,
-                type: '#comment',
-                nodeValue: 'ms-for-end:'
+            if(node.template){
+                node.children.push(new VText(node.template))
+            }else{
+                node.children = []
             }
+            if (type === 'textarea') {
+                props.type = 'textarea'
+                node.children.length = 0
+            }
+            break
+        case 'input':
+            if (!props.type) {
+                props.type = 'text'
+            }
+            break
+        case 'select':
+            if (props.hasOwnProperty('multiple')) {
+                props.multiple = 'multiple'
+                node.multiple = true
+            }
+            break
+        
+        case 'option':
+            node.children.push(new VText(trimHTML(node.template)))
+            break
+        default:
+            if(/^ms-/.test(type) ){
+                props.is = type
+                if(!props['ms-widget']){
+                   props['ms-widget'] = '{is:' + avalon.quote(type) + '}'
+                }
+            }
+            break
+    }
+    
+    if (!node.isVoidTag && !node.skipContent) {
+        var childs = lexer(innerHTML, curDeep + 1)
+        node.children = childs
+        if (type === 'table') {
+            addTbody(node.children)
         }
     }
+    var forExpr = props['ms-for']
+    if (forExpr) {
+        var cb = props['data-for-rendered']
+        var cid = cb + ':cb'
+        delete props['ms-for']
+        nodes.push({
+            nodeType: 8,
+            type: '#comment',
+            nodeValue: 'ms-for:' + forExpr,
+            signature: makeHashCode('for'),
+            directive: 'for',
+            cid: cid
+        })
+
+        if (cb && !avalon.caches[cid]) {
+            avalon.caches[cid] = Function('return ' + avalon.parseExpr(cb, 'on'))()
+        }
+
+        nodes.push(node)
+        return {
+            nodeType: 8,
+            type: '#comment',
+            nodeValue: 'ms-for-end:'
+        }
+    }
+
     return node
 }
 //如果直接将tr元素写table下面,那么浏览器将将它们(相邻的那几个),放到一个动态创建的tbody底下
@@ -306,7 +330,6 @@ function addTbody(nodes) {
                 tbody = {
                     nodeType: 1,
                     type: 'tbody',
-                    template: '',
                     children: [],
                     props: {}
                 }
@@ -346,22 +369,31 @@ var ramp = /&amp;/g
 var rnowhite = /\S+/g
 var rquote = /&quot;/g
 var rnogutter = /\s*=\s*/g
+//https://github.com/RubyLouvre/avalon/issues/1501
 function handleProps(str, props) {
     str.replace(rnogutter, '=').replace(rnowhite, function (el) {
         var arr = el.split('='), value = arr[1] || '',
-                name = arr[0].toLowerCase()
+            name = arr[0].toLowerCase()
         if (arr.length === 2) {
             if (value.indexOf('??') === 0) {
-                value = value.replace(rfill, fill).
-                        slice(1, -1).
-                        replace(ramp, '&').
-                        replace(rquote, '"')
+                value = unescapeHTML(value.replace(rfill, fill).
+                    slice(1, -1))
             }
         }
         props[name] = value
     })
 }
 
+//将字符串中的html实体字符还原为对应字符
+function unescapeHTML(target) {
+    return  target.replace(/&quot;/g, '"')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, "&") //处理转义的中文和实体字符
+            .replace(/&#([\d]+);/g, function($0, $1) {
+        return String.fromCharCode(parseInt($1, 10));
+    });
+}
 //form prototype.js
 var rtrimHTML = /<\w+(\s+("[^"]*"|'[^']*'|[^>])+)?>|<\/\w+>/gi
 function trimHTML(v) {
@@ -370,3 +402,80 @@ function trimHTML(v) {
 
 
 module.exports = lexer
+
+avalon.speedUp = function (arr) {
+    for (var i = 0; i < arr.length; i++) {
+        hasDirective(arr[i])
+    }
+}
+
+function hasDirective(a) {
+    switch (a.nodeType) {
+        case 3:
+            if (config.rbind.test(a.nodeValue)) {
+                a.dynamic  = true
+                return true
+            } else {
+                a.skipContent = true
+                return false
+            }
+        case 8:
+            if (/^ms\-for/.test(a.nodeValue)) {
+                a.dynamic = true
+                return true
+            } else {
+                a.skipContent = true
+                return false
+            }
+        case 1:
+
+            if (a.props['ms-skip']) {
+                a.skipAttrs = true
+                a.skipContent = true
+                return false
+            }
+            if(/^ms\-/.test(a.type)){
+                a.dynamic = true
+            }
+            if (hasDirectiveAttrs(a.props)) {
+                a.dynamic = true
+            }else{
+                a.skipAttrs = true
+            }
+            if (a.isVoidTag && !a.dynamic) {
+                a.skipContent = true
+                return false
+            }
+            var hasDirective = childrenHasDirective(a.children)
+            if (!hasDirective && !a.dynamic) {
+                a.skipContent = true
+                return false
+            }
+            return true
+        default:
+            if(Array.isArray(a)){
+                return childrenHasDirective(a)
+            }
+    }
+}
+
+function childrenHasDirective(arr){
+    var ret = false
+    for (var i = 0, el; el = arr[i++];) {
+        if (hasDirective(el)) {
+            ret = true
+        }
+    }
+    return ret
+}
+
+function hasDirectiveAttrs(props) {
+    if('ms-skip' in props)
+        return false
+    for (var i in props) {
+        if (i.indexOf('ms-') === 0 ) {
+            return true
+        }
+    }
+    return false
+}

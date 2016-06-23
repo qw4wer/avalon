@@ -59,11 +59,10 @@ function byRewritePrototype() {
     })
 }
 
-
-
-module.exports = {
-    byRewritePrototype: byRewritePrototype
+module.exports = function onComponentDispose(dom) {
+    byRewritePrototype(dom)
 }
+
 
 function inDomTree(el) {
     while (el) {
@@ -90,8 +89,8 @@ function fireDisposeHook(el) {
         if (docker && !el.getAttribute('cached')) {
             vm.$element = null
             vm.$hashcode = false
+            el.vtree = void 0
             delete docker.vmodel
-            delete docker.dom
             delete avalon.scopes[ wid ]
         }
         return false
