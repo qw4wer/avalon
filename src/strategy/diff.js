@@ -21,7 +21,7 @@ function diff(copys, sources) {
     
         switch (copy.nodeType) {
             case 3:
-                if (!copy.skipContent) {
+                if (copy.dynamic) {
                     directives.expr.diff(copy, src)
                 }
                 break
@@ -64,20 +64,29 @@ function execHooks(el, hooks) {
 }
 
 function diffProps(copys, sources) {
-    if (copys.order) {
+    var order = copys.order
+    if (order) {
         var directiveType
         try {
-            copys.order.replace(/([^;]+)/g, function (name) {
+           order.replace(avalon.rword, function (name) {
                 var match = name.match(rbinding)
                 var type = match && match[1]
                 directiveType = type
                 if (directives[type]) {
                     directives[type].diff(copys, sources || emptyObj(), name)
                 }
-                return name
+                if(copys.order !== order){
+                    throw "break"
+                }
+               
             })
+            
         } catch (e) {
-            avalon.log(directiveType, e, e.message, 'diffProps error')
+            if(e !== 'break'){
+                avalon.log(directiveType, e, e.message, 'diffProps error')
+            }else{
+                diffProps(copys, sources)
+            }
         }
     }
 

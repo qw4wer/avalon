@@ -5,7 +5,6 @@ var reconcile = require('../strategy/reconcile')
 
 avalon.directive('html', {
     parse: function (copy, src, binding) {
-
         if (!src.isVoidTag) {
             //将渲染函数的某一部分存起来,渲在c方法中转换为函数
             copy[binding.name] = avalon.parseExpr(binding)
@@ -22,7 +21,7 @@ avalon.directive('html', {
             var oldTree = avalon.lexer(copyValue)
             avalon.speedUp(oldTree)
             src.children = oldTree
-            var render = avalon.render(oldTree)
+            var render = avalon.render(oldTree,copy.local)
             src.render = render
             var newTree = render(copy.vmodel, copy.local)
             copy.children = newTree
@@ -38,6 +37,5 @@ avalon.directive('html', {
         var f = avalon.vdomAdaptor(vdom.children)
         reconcile(f.childNodes, vdom.children, f)
         dom.appendChild(f)
-
     }
 })

@@ -105,7 +105,6 @@ avalon.directive('duplex', {
             }
             curValue = value
         }
-        console.log(curValue)
         data.modelValue = curValue
         if (data.isString) {//输出到页面时要格式化
             value = data.format(data.vmodel, curValue + '')
@@ -145,11 +144,7 @@ avalon.directive('duplex', {
             }
 
             updateView[data.type].call(data)
-            if (dom.caret) {
-                var pos = data.caretPos
-                pos && data.setCaret(dom, pos.start, pos.end)
-                data.caretPos = null
-            }
+
 
         }
 

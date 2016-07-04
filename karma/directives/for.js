@@ -73,7 +73,7 @@ describe('for', function () {
             vm.array.reverse()
             vm.array.unshift(9)
             setTimeout(function () {
-                expect(lis[0].innerHTML).to.equal('0::9')
+                expect(lis[0].innerHTML+"!").to.equal('0::9!')
                 expect(lis[1].innerHTML).to.equal('1::5')
                 expect(lis[2].innerHTML).to.equal('2::4')
                 expect(lis[3].innerHTML).to.equal('3::3')
@@ -149,9 +149,9 @@ describe('for', function () {
     it('监听数组长度变化', function (done) {
         div.innerHTML = heredoc(function () {
             /*
-             <ul ms-controller='for2'>
-             <li ms-for='el in @array'>{{el.length}}</li>
-             </ul>
+             <select ms-controller='for2'>
+             <option ms-for='el in @array'>{{el.length}}</option>
+             </select>
              */
         })
         vm = avalon.define({
@@ -160,16 +160,16 @@ describe('for', function () {
         })
         avalon.scan(div)
         setTimeout(function () {
-            var lis = div.getElementsByTagName('li')
+            var options = div.getElementsByTagName('option')
 
-            expect(lis[0].innerHTML).to.equal('2')
-            expect(lis[1].innerHTML).to.equal('3')
+            expect(options[0].innerHTML).to.equal('2')
+            expect(options[1].innerHTML).to.equal('3')
 
             vm.array = [['a', "b", "c", "d"], [3, 4, 6, 7, 8]]
             setTimeout(function () {
 
-                expect(lis[0].innerHTML).to.equal('4')
-                expect(lis[1].innerHTML).to.equal('5')
+                expect(options[0].innerHTML).to.equal('4')
+                expect(options[1].innerHTML).to.equal('5')
                 done()
             })
         })
@@ -254,7 +254,6 @@ describe('for', function () {
             allchecked: false,
             checkAll: function (e) {
                 var checked = e.target.checked
-                console.log(checked)
                 vm.data.forEach(function (el) {
                     el.checked = checked
                 })
@@ -447,6 +446,33 @@ describe('for', function () {
                 })
             })
         })
+
+    })
+    
+    it('ms-text+ms-for', function (done) {
+        div.innerHTML = heredoc(function () {
+            /*
+             <div ms-controller="for11">
+             <p ms-for="el in @list" ms-text="el">{{el}}</p>
+             </div>
+             */
+        })
+
+        vm = avalon.define({
+            $id: 'for11',
+            list: [111,222,333]
+        });
+        avalon.scan(div)
+        setTimeout(function () {
+            var ss = div.getElementsByTagName('p')
+            expect(ss.length).to.equal(3)
+            expect(ss[0].innerHTML).to.equal('111')
+            expect(ss[1].innerHTML).to.equal('222')
+            expect(ss[2].innerHTML).to.equal('333')
+         
+            done()
+
+        },100)
 
     })
 })

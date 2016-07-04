@@ -34,13 +34,12 @@ function batchUpdate(id) {
         reconcile([dom], source, dom.parentNode)  
         scope.isMount = 1
     }
-    
     avalon.diff(copy, source)
     
     if (scope.isMount === 1) {
         var events = vm.$events["onReady"]
         if (events) {
-            vm.fire('onReady')
+            vm.$fire('onReady')
             delete vm.$events.onReady
         }
         scope.isMount = 2

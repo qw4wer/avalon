@@ -26,7 +26,7 @@ function addTag(obj) {
 function parseNodes(source, inner) {
     //ms-important， ms-controller ， ms-for 不可复制，省得死循环
     //ms-important --> ms-controller --> ms-for --> ms-widget --> ms-effect --> ms-if
-    var buffer = inner ? []: ['\nvar vnodes = [];'] 
+    var buffer = inner ? [] : ['\nvar vnodes = [];']
 
     for (var i = 0, el; el = source[i++]; ) {
         var vnode = parseNode(el)
@@ -74,13 +74,13 @@ function parseNode(source) {
             directives[b.type].parse(copy, source, b)
             return b.name
 
-        }).join(';;')
+        }).join(',')
 
         if (source.isVoidTag) {
             copy.isVoidTag = true
         } else {
             if (!('children' in copy)) {
-                
+
                 var pChildren = source.children
                 if (pChildren.length) {
                     delete source.template
@@ -91,9 +91,9 @@ function parseNode(source) {
                 }
             }
         }
-        if(source.skipContent)
+        if (source.skipContent)
             copy.skipContent = true
-        if(source.skipAttrs)
+        if (source.skipAttrs)
             copy.skipAttrs = true
 
         return addTag(copy)
@@ -168,7 +168,7 @@ function stringifyText(el) {
         }).join(' + ')
         nodeValue = 'String(' + token + ')'
     }
-    return '{\ntype: "#text",\nnodeType:3,\nnodeValue: ' + nodeValue + '\n}'
+    return '{\ntype: "#text",\nnodeType:3,\ndynamic:true,\nnodeValue: ' + nodeValue + '\n}'
 }
 
 module.exports = parseNodes
