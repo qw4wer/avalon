@@ -16,8 +16,14 @@ function heredoc(fn) {
             }
 var feather = heredoc(function(){
     /*
-修复 HTML实体转义问题,将处理逻辑放到parseView里面去
-修复双层注释节点ms-for循环问题(markRepeatRange BUG)
+重构ms-controller, ms-important指令
+虚拟DOM移除template属性
+修正ms-for的排序问题
+fix 在chrome与firefox下删掉select中的空白节点，会影响到selectedIndex BUG  
+ms-widget, ms-controller, ms-important生成的VM与对应的DOM都保存起来,
+并在avalon.vdomAdaptor中还原
+添加unescapeHTML与escapeHTML方法
+全新的lexer与 插值表达式抽取方法
      */
 })
 fs.writeFileSync('./src/seed/lang.share.js', text, 'utf8')
@@ -38,7 +44,7 @@ module.exports = {
         libraryTarget: 'umd',
         library: 'avalon'
     }, //页面引用的文件
-    plugins: [
+    plugins: [//
       new webpack.BannerPlugin('built in '+snow+' version '+ v+' by 司徒正美\n'+feather)
     ],
     module: {

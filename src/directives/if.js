@@ -7,6 +7,8 @@ avalon.directive('if', {
         if (!c) {
             copy.nodeType = 8
             copy.order = ""
+            //不再执行子孙节点的操作
+            copy.skipContent = true
         }
         if (c !== src[name]) {
             src[name] = c
@@ -20,8 +22,8 @@ avalon.directive('if', {
         var show = vdom['ms-if']
         if (show) {
             //要移除元素节点,在对应位置上插入注释节点
-            //console.log(vdom.nodeType,vdom.dom)
             vdom.nodeType = 1
+            vdom.nodeValue = null
             var comment = vdom.comment
             parent = comment.parentNode
             parent.replaceChild(dom, comment)
@@ -35,8 +37,10 @@ avalon.directive('if', {
                 cb: function () {
                     var comment = document.createComment('ms-if')
                     //去掉注释节点临时添加的ms-effect
+                    //https://github.com/RubyLouvre/avalon/issues/1577
+                    //这里必须设置nodeValue为ms-if,否则会在节点对齐算法中出现乱删节点的BUG
+                    vdom.nodeValue = 'ms-if'
                     parent.replaceChild(comment, dom)
-                    //comment.parentNode = parent
                     vdom.nodeType = 8
                     vdom.comment = comment
                 }

@@ -1,47 +1,55 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-    <title>test</title>
-    <script src="../dist/avalon.js"></script>
-    <style>
-        .rank_top {
-            background-color: red;
-        }
-    </style>
-</head>
-<body>
- <script>
- avalon.component('ms-button', {
-    template: '<button type="button"><span><slot name="buttonText"></slot></span></button>',
-    defaults: {
-        buttonText: "button",
-        onViewChange: function(){
-            console.log('viewchange')
-        }
-    },
-    soleSlot: 'buttonText'
-})
-var vm = avalon.define({
-    $id:"root",
-    aaa:"111",
-    title:'title',
-    color:'red',
-    arr: [222,333,444],
-    html: '<span>eee</span><span>eee</span>'
-});
-avalon.define({
-    $id:'ddd',
-    ddd:3333
-})
-</script>
-<div ms-controller="root">
-    <p ms-css='{color:@color}'>{{@color}}</p>
-    <p ms-html='@html'>ddd</p>
-    <p ms-for='($index,el) in @arr'>{{el}}::{{$index}}</p>
-    <p ms-text='@title' ms-attr='{title:@title}' ms-class='@title'></p>
-    <ms-button>{{@aaa}}</ms-button>
-    <div ms-important='ddd'>{{@ddd}}</div>
-</div>
+    <head>
+        <meta charset="UTF-8">
+        <title></title>
 
+    </head>
+    <body>
+        <script id="aaa">
+            console.log(2222)
+        </script>
+        <style id="bbb">
+
+        </style>
+    <xmp id="ccc">
+
+    </xmp>
+    <select>
+        <option id="fff"></option>
+    </select>
+    <template id="ddd">
+
+    </template>
+    <noscript id="eee">
+
+    </noscript>
+    3333
+    <script>
+
+
+        var el = document.getElementById('bbb')
+        console.log(el)
+        el.innerHTML = 'body{color:red}'
+        var el = document.getElementById('ccc')
+        console.log(el)
+        el.innerHTML = '<input/><button>222</button>'
+        var el = document.getElementById('ddd')
+        console.log(el)
+        el.innerHTML = '<input/><button>222</button>'
+        var el = document.getElementById('eee')
+        console.log(el)
+        el.innerHTML = '<input/><button>222</button>'
+        var el = document.querySelector('#aaa')
+       
+        el.type = 'text/javascript'
+        el.innerHTML = 'console.log(1);'
+
+        var el = document.getElementById('fff')
+        console.log(el)
+        el.innerText = '<input/><button>222</button>'
+
+
+    </script>
 </body>
 </html>

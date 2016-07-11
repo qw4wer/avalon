@@ -29,7 +29,7 @@ describe('html', function () {
         })
         avalon.scan(div, vm)
         var el = div.children[0]
-        var prop = 'textContent' in div ? 'textContent': 'innerText'
+        var prop = 'textContent' in div ? 'textContent' : 'innerText'
         expect(el[prop]).to.equal('zzzxxx')
         vm.b = '<span>{{@c}}</span>'
         setTimeout(function () {
@@ -41,10 +41,10 @@ describe('html', function () {
     it('test2', function (done) {
         div.innerHTML = heredoc(function () {
             /*
-            <div ms-controller="html2">
-            <p><input ms-duplex="@a" />{{@a}}<strong ms-text="@a"></strong></p>
-            <p><input ms-duplex="@b" /><span>{{@b}}</span><span ms-html="@b"></span></p>
-            </div>
+             <div ms-controller="html2">
+             <p><input ms-duplex="@a" />{{@a}}<strong ms-text="@a"></strong></p>
+             <p><input ms-duplex="@b" /><span>{{@b}}</span><span ms-html="@b"></span></p>
+             </div>
              */
         })
         vm = avalon.define({
@@ -54,28 +54,28 @@ describe('html', function () {
         })
         avalon.scan(div, vm)
         var el = div.getElementsByTagName('p')
-        var prop = 'textContent' in div ? 'textContent': 'innerText'
+        var prop = 'textContent' in div ? 'textContent' : 'innerText'
         expect(el[0][prop]).to.equal('111111')
         expect(el[1][prop]).to.equal('222222')
         vm.b = '333'
         setTimeout(function () {
-             expect(el[1][prop]).to.equal('333333')
+            expect(el[1][prop]).to.equal('333333')
             done()
         })
 
     })
-     it('test3', function (done) {
+    it('test3', function (done) {
         div.innerHTML = heredoc(function () {
             /*
-            <div ms-controller="html3" ms-html='@aaa'>
-            </div>
+             <div ms-controller="html3" ms-html='@aaa'>
+             </div>
              */
         })
         window.kkk20160630 = 1
         vm = avalon.define({
             $id: 'html3',
-            bbb:111,
-            aaa:'<b id="color">{{@bbb}}</b><script>window.kkk20160630= 20<\/script><style>#color{color:red}</style>'
+            bbb: 111,
+            aaa: '<b id="color">{{@bbb}}</b><script>window.kkk20160630= 20<\/script><style>#color{color:red}</style>'
         })
         avalon.scan(div, vm)
 
@@ -89,5 +89,103 @@ describe('html', function () {
             done()
         }, 300)
 
+    })
+
+    it('能过ms-html动态加载控制器', function (done) {
+        div.innerHTML = heredoc(function () {
+            /*
+             <div ms-controller="html4">
+             <div ms-html="@tpl"></div>
+             </div>
+             */
+        })
+        vm = avalon.define({
+            $id: 'html4',
+            tpl: ""
+        })
+
+        var vm2 = avalon.define({
+            $id: 'html42',
+            aaa: "aaaa"
+        });
+        avalon.scan(div)
+
+        setTimeout(function () {
+            vm.tpl = heredoc(function () {
+                /*
+                 <div ms-controller="html42">
+                 <span  ms-html="@aaa"></span>
+                 </div>
+                 */
+            })
+            vm2.aaa = 5555
+            var el = div.getElementsByTagName('span')[0]
+            expect(el.innerHTML).to.equal('5555')
+            done()
+        }, 300)
+
+    })
+
+    it('ms-html遇到ms-if应用节点对齐算法BUG', function (done) {
+        div.innerHTML = heredoc(function () {
+            /*
+             <div ms-controller="html5" ms-html="@tpl"></div>
+             */
+        })
+         var html = heredoc(function () {
+            /*
+             <blockquote ms-controller="html52">
+             <span ms-if='@show'>AAA</span>|<span ms-for='el in @ter'>{{el}}</span>
+             </blockquote>
+             */
+        })
+        vm = avalon.define({
+            $id: 'html5',
+            tpl: ""
+        });
+        avalon.define({
+            $id: 'html52',
+            ter: ['呵呵哒1', '呵呵哒2', '呵呵哒3'],
+            show: false
+        });
+        avalon.scan(div)
+        setTimeout(function () {
+            vm.tpl = html
+            expect(div.getElementsByTagName('span').length).to.equal(3)
+            vm.tpl = ''
+            setTimeout(function () {
+                expect(div.getElementsByTagName('span').length).to.equal(0)
+                vm.tpl = html
+                setTimeout(function () {
+                    expect(div.getElementsByTagName('span').length).to.equal(3)
+                    done()
+                    delete avalon.scopes['html41']
+                    delete avalon.scopes['html51']
+                    delete avalon.scopes['html51']
+                    delete avalon.scopes['html52']
+                }, 150)
+            }, 150)
+
+        }, 150)
+    })
+
+    it('ms-html遇到XMP', function (done) {
+        div.innerHTML = heredoc(function () {
+            /*
+             <div ms-controller="html6" ms-html="@tpl"></div>
+             */
+        })
+      
+        vm = avalon.define({
+            $id: 'html6',
+            tpl: ""
+        });
+       
+        avalon.scan(div)
+        setTimeout(function(){
+            vm.tpl = '<xmp><input /></xmp>'
+            expect(div.getElementsByTagName('input').length).to.equal(0)
+            done()
+        }, 300)
     })
 })

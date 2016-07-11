@@ -9,11 +9,9 @@ avalon.keyMap = keyMap
   var quoted = {
       type: 1,
       template: 1,
-      innerHTML: 1,
-      outerHTML: 1,
       order: 1,
       nodeValue: 1,
-      directive: 1,
+      dynamic: 1,
       signature: 1,
       wid: 1,
       cid: 1
@@ -39,7 +37,8 @@ function stringify(obj) {
                 arr2.push(fixKey(k) + ': ' + kv)
             }
             arr1.push('props: {' + arr2.join(',\n') + '}')
-        } else if(obj.hasOwnProperty(i)) {
+        } else if(obj.hasOwnProperty(i) && i !== 'dom') {
+           
             var v = obj[i]
             if (typeof v === 'string') {
                 v = quoted[i] ? quote(v) : v
