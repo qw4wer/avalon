@@ -543,5 +543,69 @@ describe('for', function () {
             }, 100)
         }, 100);
     })
+    it('防止构建循环区域错误', function (done) {
+        div.innerHTML = heredoc(function () {
+            /*
+             <ul ms-controller="for13">
+             <li>zzz</li>
+             <li ms-for="el in @arr">{{el}}</li>    
+             </ul>
+             */
+        })
 
+        vm = avalon.define({
+            $id: 'for13',
+            arr: ['aaa', 'bbb', 'ccc'],
+            bbb: true
+        });
+        avalon.scan(div)
+        setTimeout(function () {
+            var lis = div.getElementsByTagName('li')
+            expect(lis.length).to.equal(4)
+            done()
+        }, 150)
+    })
+
+    it('注解for指令嵌套问题', function (done) {
+        div.innerHTML = heredoc(function () {
+            /*
+             
+             <style>
+             .c-red {
+             color: red;
+             }
+             .c-green {
+             color: green;
+             }
+             .c-blue {
+             color: blue;
+             }
+             </style>
+             <div ms-controller="for14">
+             <!--ms-for:(idx1, item1) in @arr-->
+             <p>Group这是标题</p>
+             <!--ms-for:(idx2, item2) in item1-->
+             <div>内容1</div>
+             <strong :class="'c-' + (idx1 < 1 ? 'red' : idx1 > 1 ? 'green' : 'blue')">
+             内容2 {{ (idx1 < 1 ? 'red' : idx1 > 1 ? 'green' : 'blue') + '-' + item2 }}
+             </strong>
+             <!--ms-for-end:-->
+             <!--ms-for-end:-->
+             </div>
+             */
+        })
+
+        vm = avalon.define({
+            $id: 'for14',
+            arr: [
+                {a: 'a1', b: 'b1'}, {a: 'a2', b: 'b2'}, {a: 'a3', b: 'b3'}
+            ]
+        });
+        avalon.scan(div)
+        setTimeout(function () {
+            var strongs = div.getElementsByTagName('strong')
+            expect(strongs.length).to.equal(6)
+            done()
+        }, 150)
+    })
 })

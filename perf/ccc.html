@@ -1,93 +1,24 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
+
     <head>
-        <title></title>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script src="../dist/avalon.js"></script>
+        <script>
+            avalon.define({
+                $id: 'test',
+                arr: [11,22,33]
+            })
+           
+        </script>
 
     </head>
-   
-         <body>
-        <div ms-controller="test">
-            <div ms-html="@tpl"></div>
-            <button ms-click="@switch1">切换1</button>
-            <button ms-click="@switch2">切换2</button>
-        </div>
-        <script>            
-            function heredoc(fn) {
-                return fn.toString().replace(/^[^\/]+\/\*!?\s?/, '').
-                        replace(/\*\/[^\/]+$/, '').trim().replace(/>\s*</g, '><')
-            }
-            var v123 = heredoc(function () {
-                /*
-                 <div ms-controller="test2">
-                 <xmp ms-widget="{is:'ms-span',$id:'xxx'}"></xmp>
-                 </div>
-                 */
-            })
-            var v456 = heredoc(function () {
-                /*
-                 <div ms-controller="test3">&nbsp;1
-                 <xmp ms-widget="{is:'ms-span',$id:'yyy'}"></xmp>
-                 </div>
-                 */
-            })
 
-                var vm = avalon.define({
-                    $id: 'test',
-                    tpl: "",
-                    switch1: function() {
-                        avalon.vmodels.test.tpl = v123
-                    },
-                    switch2: function() {
-                        avalon.vmodels.test.tpl = v456
-                    }
-                });
+    <body :controller="test">
+        <ul>
+            <li ms-for="el in @arr">{{el}}</li>
+        </ul>
 
-                var vm1 = avalon.define({
-                    $id: 'test2',
-                    aaa:111
-                });
-                var vm2 = avalon.define({
-                    $id: 'test3',
-                    aaa: 222
-                });
-
-                avalon.component('ms-span', {
-                    template: "<span ms-click='@click'>{{@aaa}}</span>",
-                    defaults: {
-                        click: function() {
-                            console.log(11)//多次切换后再点击 失效！！
-                        }
-                    }
-                });
-        </script>
     </body>
+
 </html>
-
-.page-toc:before {
-    content: "Table of Contents";
-    font-weight: bold;
-}
-
-.page-toc {
-	float: right;
-    background: #f8f8f8;
-    border: 1px solid rgba(0, 0, 0, 0.07);
-    border-radius: 3px;
-    padding: 20px !important;
-	font-size: smaller;
-}
-
-.page-toc ul {
-    padding-left: 20px;
-}
-
-.page-toc > ul {
-	padding-left: 0;
-}
-
-.page-toc li {
-    list-style: none;
-}

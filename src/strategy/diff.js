@@ -29,8 +29,7 @@ function diff(copys, sources) {
                 if (copy.dynamic === 'for') {
                     directives['for'].diff(copy, src,
                     copys[i+1],sources[i+1],sources[i+2]) 
-                }
-                if(src.afterChange){
+                }else if(src.afterChange){
                     execHooks(src, src.afterChange)
                 }
                 break
@@ -38,7 +37,7 @@ function diff(copys, sources) {
                 if (copy.order) {
                     diffProps(copy, src)
                 }
-                if (!copy.skipContent && !copy.isVoidTag ) {
+                if (copy.nodeType === 1 && !copy.skipContent && !copy.isVoidTag ) {
                     diff(copy.children, src.children || emptyArr, copy)
                 }
                 if(src.afterChange){
@@ -76,14 +75,13 @@ function diffProps(copys, sources) {
                     directives[type].diff(copys, sources || emptyObj(), name)
                 }
                 if(copys.order !== order){
-                    throw "break"
+                    throw 'break'
                 }
-               
             })
             
         } catch (e) {
             if(e !== 'break'){
-                avalon.log(directiveType, e, e.stack || e.message, 'diffProps error')
+                avalon.warn(directiveType, e, e.stack || e.message, 'diffProps error')
             }else{
                 diffProps(copys, sources)
             }

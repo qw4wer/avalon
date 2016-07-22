@@ -1,49 +1,37 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title></title>
+        <title>TODO supply a title</title>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport"  content="width=device-width, initial-scale=1.0">
         <script src="../dist/avalon.js"></script>
-
-    </head>
-    <body>
-        <div ms-controller="test">
-            <div ms-html="@tpl"></div>
-            <button ms-click="@click">插入</button>
-        </div>
         <script>
-            function heredoc(fn) {
-                return fn.toString().replace(/^[^\/]+\/\*!?\s?/, '').
-                        replace(/\*\/[^\/]+$/, '').trim().replace(/>\s*</g, '><')
-            }
-            var v123 = heredoc(function () {
-                /*
-                 <xmp ms-skip class="hide" id="addTpl">
-                 <form ms-validate="@validate">
-                 <div class="inputbar clearfix"><label class="inputbar-label" for="name">名称：</label>
-                 <div class="inputbox"><input class="form-control" id="name" type="text" ms-attr="[@operationType=='edit'?{disabled:'disabled'}:{}]" ms-duplex='@layerData.name' ms-rules='{required:true}' data-required-message='名称不得为空' /></div>
-                 </div>
-                 <div class="inputbar clearfix"><label class="inputbar-label" for="desc">描述：</label>
-                 <div class="inputbox"><input class="form-control" id="desc" type="text" ms-duplex='@layerData.desc' /></div>
-                 </div>
-                 <div class="inputbar clearfix"><label class="inputbar-label" for="ddays">自动删除(天)：</label>
-                 <div class="inputbox"><input class="form-control" id="ddays" 
-                 type="text" ms-duplex-number='@layerData.ddays' ms-rules='{digits:true}' data-digits-message='请输入整数' /></div>
-                 </div>
-                 <p class="error-msg" ms-text="@errorMsg"></p>
-                 </form>
-                 </xmp>
-                 */
+            var vm = vm = avalon.define({
+                $id: 'for1',
+                array: [],
+                aaa: {}
             })
-
-            var vm = avalon.define({
-                $id: 'test',
-                tpl: "",
-                click: function () {
-                    this.tpl = v123;
+            var a = [11,222,444]
+            console.log(avalon.mix([], a))
+            setTimeout(function () {
+                console.log('=======')
+                vm.aaa = {
+                    d:1
                 }
-            });
+                vm.array = ["&#xe67c;","&#xe67a;","&#xe67b;"]
+            }, 1000)
+            
+           
+            
         </script>
+    </head>
+    <body >
+        <div ms-controller='for1'>
+            {{@aaa.d}}
+            <ul>
+                <li ms-for="el in @array" ms-text="el"></li>
+            </ul>
+        </div>
+
     </body>
 </html>

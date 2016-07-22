@@ -13,10 +13,6 @@ if (!W3C) {
     delete canBubbleUp.select
 }
 
-//canBubbleUp.touchstart = 1
-//canBubbleUp.touchstart = 1
-//canBubbleUp.touchstart = 1
-
 var eventHooks = avalon.eventHooks
 /*绑定事件*/
 avalon.bind = function (elem, type, fn) {
@@ -182,13 +178,13 @@ avalon.fireDom = function (elem, type, opts) {
 }
 
 var rmouseEvent = /^(?:mouse|contextmenu|drag)|click/
-var rvendor = /^(?:ms|webkit|moz)/
+var rconstant = /^[A-Z_]+$/
 function avEvent(event) {
     if (event.originalEvent) {
         return this
     }
     for (var i in event) {
-        if (!rvendor.test(i) && typeof event[i] !== 'function') {
+        if (!rconstant.test(i) && typeof event[i] !== 'function') {
             this[i] = event[i]
         }
     }
@@ -325,13 +321,4 @@ avalon.fn.unbind = function (type, fn, phase) {
         avalon.unbind(this[0], type, fn, phase)
     }
     return this
-}
-avalon.$$unbind = function (node) {
-    var nodes = node.getElementsByTagName('*')
-    //IE6-7这样取所有子孙节点会混入注释节点
-    avalon.each(nodes, function (i, el) {
-        if (el.nodeType === 1 && el.getAttribute('avalon-events')) {
-            avalon.unbind(el)
-        }
-    })
 }

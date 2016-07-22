@@ -22,7 +22,7 @@ avalon.parseHTML = function (html) {
     if (hasCache) {
         return fixCloneNode(hasCache)
     }
-    var vnodes = avalon.lexer(html, false, 1000)
+    var vnodes = avalon.lexer(html)
     for (var i = 0, el; el = vnodes[i++]; ) {
         fragment.appendChild(avalon.vdomAdaptor(el, 'toDOM'))
     }
@@ -63,7 +63,7 @@ avalon.unescapeHTML = function (string) {
 var rescapeHTML = /["'&<>]/
 //https://github.com/nthtran/vdom-to-html
 //将字符串经过 str 转义得到适合在页面中显示的内容, 例如替换 < 为 &lt 
-avalon.escapeHtml = function (string) {
+avalon.escapeHTML = function (string) {
     var str = '' + string
     var match = rescapeHTML.exec(str)
 

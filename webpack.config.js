@@ -16,14 +16,10 @@ function heredoc(fn) {
             }
 var feather = heredoc(function(){
     /*
-重构ms-controller, ms-important指令
-虚拟DOM移除template属性
-修正ms-for的排序问题
-fix 在chrome与firefox下删掉select中的空白节点，会影响到selectedIndex BUG  
-ms-widget, ms-controller, ms-important生成的VM与对应的DOM都保存起来,
-并在avalon.vdomAdaptor中还原
-添加unescapeHTML与escapeHTML方法
-全新的lexer与 插值表达式抽取方法
+component/initjs中的protected变量更名为immunity,方便在严格模式下运行
+为伪事件对象过滤掉原生事件对象中的常量属性   
+修复class,hover,active指令互相干扰的BUG
+修复事件绑定中表达式太复杂,不会补上($event)的BUG
      */
 })
 fs.writeFileSync('./src/seed/lang.share.js', text, 'utf8')
@@ -35,8 +31,8 @@ module.exports = {
         avalon: './src/avalon', //我们开发时的入口文件
         'avalon.modern': './src/avalon.modern',
         'avalon.test': './src/avalon.test',
-        'avalon.next': './src/avalon.next'
-      //  'avalon.pager': './src/pager'
+        'avalon.next': './src/avalon.next',
+      //  'avalon.mobile': './src/avalon.mobile'
     },
     output: {
         path: path.join(__dirname, 'dist'),
@@ -48,12 +44,6 @@ module.exports = {
       new webpack.BannerPlugin('built in '+snow+' version '+ v+' by 司徒正美\n'+feather)
     ],
     module: {
-        loaders: [
-        ],
-        preLoaders: [
-            //https://segmentfault.com/a/1190000004468428
-          //  {test: /\.js$/, loader: 'eslint-loader', exclude: /node_modules|__test__/}
-        ]
     },
     eslint: {
         configFile: './eslintrc.json'
