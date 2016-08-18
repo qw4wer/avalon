@@ -16,10 +16,12 @@ function heredoc(fn) {
             }
 var feather = heredoc(function(){
     /*
-component/initjs中的protected变量更名为immunity,方便在严格模式下运行
-为伪事件对象过滤掉原生事件对象中的常量属性   
-修复class,hover,active指令互相干扰的BUG
-修复事件绑定中表达式太复杂,不会补上($event)的BUG
+2.1.4 and npm 2.1.12
+修正 ms-skip BUG
+去掉节点生成算法
+首先渲染改成根据真实DOM生成虚拟DOM
+重构 avalon.speedUp
+去掉avalon.config中已经没有用rbind, rexprg
      */
 })
 fs.writeFileSync('./src/seed/lang.share.js', text, 'utf8')

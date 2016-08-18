@@ -3,7 +3,7 @@ function heredoc(fn) {
     return fn.toString().replace(/^[^\/]+\/\*!?\s?/, '').
             replace(/\*\/[^\/]+$/, '').trim().replace(/>\s*</g, '><')
 }
-
+var textProp = 'innerText' in document.createElement('div') ? 'innerText' : 'textContent'
 function fireClick(el) {
     if (el.click) {
         el.click()
@@ -28,7 +28,7 @@ describe('widget', function () {
         body.removeChild(div)
         delete avalon.vmodels[vm.$id]
     })
-    it('inline-block', function (done) {
+    it('ms-button中buttonText', function (done) {
         div.innerHTML = heredoc(function () {
             /*
              <div ms-controller='widget0' >
@@ -45,14 +45,15 @@ describe('widget', function () {
         })
         avalon.scan(div)
         setTimeout(function () {
+
             var span = div.getElementsByTagName('span')
-            expect(span[0].innerHTML).to.equal('这是VM中的TEXT')
-            expect(span[1].innerHTML).to.equal('这是标签里面的TEXT')
-            expect(span[2].innerHTML).to.equal('这是属性中的TEXT')
-            expect(span[3].innerHTML).to.equal('button')
+            expect(span[0][textProp]).to.equal('这是VM中的TEXT')
+            expect(span[1][textProp]).to.equal('这是标签里面的TEXT')
+            expect(span[2][textProp]).to.equal('这是属性中的TEXT')
+            expect(span[3][textProp]).to.equal('button')
             vm.btn = '改动'
             setTimeout(function () {
-                expect(span[0].innerHTML).to.equal('改动')
+                expect(span[0][textProp]).to.equal('改动')
 
                 done()
             })
@@ -73,10 +74,10 @@ describe('widget', function () {
         })
         vm = avalon.define({
             $id: 'widget1',
-            panelBody: '这是面板的内容',
             aaa: {
-                ms_button: {
-                    buttonText: "vm中的值"
+                panelBody: 'aaa面板',
+                button: {
+                    buttonText: "aaa按钮"
                 }
             }
         })
@@ -92,19 +93,19 @@ describe('widget', function () {
         setTimeout(function () {
             var div2 = getDiv(div)
             var span = div.getElementsByTagName('span')[0]
-            expect(div2.innerHTML).to.equal('这是面板的内容')
-            expect(span.innerHTML).to.equal('vm中的值')
-            vm.panelBody = '新面板'
-            vm.aaa.ms_button.buttonText = "新按钮"
+            expect(div2[textProp]).to.equal('aaa面板')
+            expect(span[textProp]).to.equal('aaa按钮')
+            vm.aaa.panelBody = '新面板'
+            vm.aaa.button.buttonText = "新按钮"
             setTimeout(function () {
-                expect(div2.innerHTML).to.equal('新面板')
-                expect(span.innerHTML).to.equal('新按钮')
-                vm.panelBody = '新面板plus'
-                vm.aaa.ms_button.buttonText = "新按钮plus"
+                expect(div2[textProp]).to.equal('新面板')
+                expect(span[textProp]).to.equal('新按钮')
+                vm.aaa.panelBody = '新面板plus'
+                vm.aaa.button.buttonText = "新按钮plus"
                 setTimeout(function () {
 
-                    expect(div2.innerHTML).to.equal('新面板plus')
-                    expect(span.innerHTML).to.equal('新按钮plus')
+                    expect(div2[textProp]).to.equal('新面板plus')
+                    expect(span[textProp]).to.equal('新按钮plus')
                     done()
                 }, 300)
             }, 300)
@@ -413,7 +414,7 @@ describe('widget', function () {
             vm.config.buttonText = 'change'
             setTimeout(function () {
                 var s = div.getElementsByTagName('span')[0]
-                expect(s.innerHTML).to.equal('change')
+                expect(s[textProp]).to.equal('change')
                 done()
             }, 100)
         }, 150)
@@ -423,11 +424,11 @@ describe('widget', function () {
     it('组件的最外层元素定义其他指令不生效的BUG', function (done) {
         div.innerHTML = heredoc(function () {
             /*
-             <div ms-controller="widget7"><wbr ms-widget="[{is : 'test'},@$config]"></div>
+             <div ms-controller="widget7" id="widget7"><wbr ms-widget="[{is : 'test'},@$config]"></div>
              */
         })
         avalon.component("test", {
-            template: "<test ms-attr=\"{title:@aaa}\">{{##bbb}}</test>",
+            template: '<test ms-attr="{title:@aaa}">{{##bbb}}</test>',
             defaults: {
                 bbb: "TEST",
                 aaa: 'title'
@@ -439,10 +440,11 @@ describe('widget', function () {
         })
         avalon.scan(div)
         setTimeout(function () {
-            var widget = div.firstChild.firstChild
+            var widget = div.getElementsByTagName('test')[0]
             expect(widget.nodeName.toLowerCase()).to.equal('test')
             expect(widget.title).to.equal('title')
             expect(widget.innerHTML).to.equal('TEST')
+            delete avalon.components['test']
             done()
 
         }, 150)
@@ -469,6 +471,7 @@ describe('widget', function () {
         setTimeout(function () {
             var span = div.getElementsByTagName('kbd')[0]
             expect(span.firstChild.nodeValue.trim()).to.equal('123')
+            delete avalon.components['ms-time']
             delete avalon.scopes.d234234
             delete avalon.vmodels.d234234
             done()
@@ -534,11 +537,152 @@ describe('widget', function () {
                 vm.clickPage1()
                 setTimeout(function () {
                     expect(div.getElementsByTagName('nav').length).to.equal(0)
-                    done()
+
+                    delete avalon.components['ms-pagination2']
                     delete avalon.scopes.xxx_
                     delete avalon.vmodels.xxx_
+                    done()
                 }, 150)
             }, 150)
+        }, 150)
+
+    })
+
+    it('组件没有cached的情况不断切换里面的事件还能生效', function (done) {
+        div.innerHTML = heredoc(function () {
+            /*
+             <div ms-controller="widget10" ms-html="@tpl"></div>
+             */
+        })
+        var v123 = heredoc(function () {
+            /*
+             <div ms-controller="widget10_1">
+             <p ms-click="@alert">123</p>
+             <wbr  ms-widget="{is:'ms-remove'}"/>
+             </div>
+             */
+        })
+        var v456 = heredoc(function () {
+            /*
+             <div ms-controller="widget10_2">
+             <p ms-click="@alert">456</p>
+             <wbr  ms-widget="{is:'ms-remove'}"/>
+             </div>
+             */
+        })
+        var clickIndex = 0
+        avalon.component('ms-remove', {
+            template: "<span ms-click='@click'>{{@ddd}}</span>",
+            defaults: {
+                ddd: '3333',
+                click: function () {
+                    ++clickIndex
+                }
+            }
+        });
+        vm = avalon.define({
+            $id: 'widget10',
+            tpl: v123,
+            switch1: function () {
+                vm.tpl = v123
+            },
+            switch2: function () {
+                vm.tpl = v456
+            }
+        })
+        avalon.define({
+            $id: 'widget10_1',
+            ddd: 'aaaa',
+            alert: function () {
+                avalon.log('????')
+            }
+        });
+
+        avalon.define({
+            $id: 'widget10_2',
+            ddd: 'bbbb',
+            alert: function () {
+                avalon.log('!!!!')
+            }
+        });
+        avalon.scan(div)
+        setTimeout(function () {
+            var spans = div.getElementsByTagName('span')
+            expect(spans.length).to.equal(1)
+            expect(spans[0].innerHTML).to.equal('aaaa')
+            vm.switch2()
+            setTimeout(function () {
+                var spans = div.getElementsByTagName('span')
+                expect(spans.length).to.equal(1)
+                expect(spans[0].innerHTML).to.equal('bbbb')
+                vm.switch1()
+                setTimeout(function () {
+                    var spans = div.getElementsByTagName('span')
+                    expect(spans.length).to.equal(1)
+                    expect(spans[0].innerHTML).to.equal('aaaa')
+                    fireClick(spans[0])
+                    setTimeout(function () {
+                        expect(clickIndex).to.equal(1)
+                        delete avalon.components['ms-remove']
+                        delete avalon.scopes['widget10_1']
+                        delete avalon.scopes['widget10_2']
+                        delete avalon.vmodels['widget10_1']
+                        delete avalon.vmodels['widget10_2']
+                        done()
+                    }, 20)
+                }, 100)
+            }, 100)
+        }, 150)
+
+
+
+
+    })
+    it('skipContent导致组件渲染异常', function (done) {
+
+        div.innerHTML = heredoc(function () {
+            /*
+             <div :controller="vmRoot">
+             <xmp :widget='{is:"CoursePlanCard", $id:"CoursePlanCard"}'></xmp>
+             </div>
+             */
+        })
+        avalon.component("CoursePlanCard", {
+            template: heredoc(function () {
+                /*
+                 <div class="CoursePlanCard" >
+                 <div class="CoursePlanCard-info">
+                 <p class="CoursePlanCard-tip" id='aass'>
+                 <span>计划类型:</span>{{''}}</p>
+                 <p class="CoursePlanCard-tip">
+                 <span>计划时间:</span>{{''}}</p>  
+                 <p class="CoursePlanCard-tip">
+                 <span>必修学分:</span>{{''}}</p>
+                 <p class="CoursePlanCard-tip">
+                 <span>选修学分:</span>{{''}}</p>
+                 </div>
+                 </div>
+                 */
+            }),
+            defaults: {
+                onInit: function (a) {
+                    console.log(a)
+                }
+            }
+        })
+
+        vm = avalon.define({
+            $id: "vmRoot"
+        })
+        avalon.scan(div)
+        setTimeout(function () {
+            expect(div.getElementsByTagName('span').length).to.equal(4)
+            delete avalon.components['CoursePlanCard']
+            delete avalon.scopes['vmRoot']
+            delete avalon.scopes['CoursePlanCard']
+            delete avalon.vmodels['vmRoot']
+            delete avalon.vmodels['CoursePlanCard']
+            done()
         }, 150)
 
     })

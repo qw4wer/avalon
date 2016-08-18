@@ -5,7 +5,8 @@ module.exports = function (config) {
         files: [
             {pattern: 'node_modules/chai/chai.js', include: true},
             'dist/avalon.test.js',
-            'karma/reconcile.js',
+           // 'karma/reconcile.js',
+            'karma/$watch.js',
             'karma/directives/text.js',
             'karma/directives/controller.js',
             'karma/directives/expr.js',
@@ -31,7 +32,7 @@ module.exports = function (config) {
                 error: 'bgRed'
             }
         },
-        port: 9876,
+        port: 9858,
         colors: true,
         logLevel: config.LOG_INFO,
 //autoWatch为true,Karma将自动执行测试用例

@@ -35,6 +35,7 @@ function orderBy(array, criteria, reverse) {
 }
 
 function filterBy(array, search) {
+    console.log(array, search)
     var type = avalon.type(array)
     if (type !== 'array' && type !== 'object')
         throw 'filterBy只能处理对象或数组'
@@ -42,12 +43,14 @@ function filterBy(array, search) {
     var stype = avalon.type(search)
     if (stype === 'function') {
         var criteria = search
-    } else if (stype === 'string' || stype === 'number' ) {
+    } else if (stype === 'string' || stype === 'number') {
         if (search === '') {
             return array
         } else {
             var reg = new RegExp(avalon.escapeRegExp(search), 'i')
-            criteria = function(el){
+            console.log(reg)
+            criteria = function (el) {
+                console.log(el)
                 return reg.test(el)
             }
         }
@@ -56,7 +59,8 @@ function filterBy(array, search) {
     }
 
     array = convertArray(array).filter(function (el, i) {
-        return !!criteria.apply(el, [el.value,i].concat(args) )
+        
+        return !!criteria.apply(el, [el.value, i].concat(args))
     })
     var isArray = type === 'array'
     var target = isArray ? [] : {}
@@ -88,13 +92,11 @@ function limitBy(input, limit, begin) {
     var type = avalon.type(input)
     if (type !== 'array' && type !== 'object')
         throw 'limitBy只能处理对象或数组'
-    //尝试将limit转换数值
-    if (Math.abs(Number(limit)) === Infinity) {
-        limit = Number(limit)
-    } else {
-        limit = parseInt(limit, 10)
+    //必须是数值
+    if (typeof limit !== 'number') {
+        return input
     }
-    //转换不了返回
+    //不能为NaN
     if (Number.isNaN(limit)) {
         return input
     }
@@ -102,15 +104,19 @@ function limitBy(input, limit, begin) {
     if (type === 'object') {
         input = convertArray(input)
     }
-    limit = Math.min(input.length, limit)
-    begin = (!begin || Number.isNaN(begin)) ? 0 : ~~begin
+    var n = input.length
+    limit = Math.min(n, limit)
+    begin = typeof begin === 'number' ? begin : 0
     if (begin < 0) {
-        begin = Math.max(0, input.length + begin)
+        begin = Math.max(0, n + begin)
     }
 
     var data = []
-    for (var i = begin; i < limit; i++) {
+    for (var i = begin; i < n; i++) {
         data.push(input[i])
+        if (data.length === limit) {
+            break
+        }
     }
     var isArray = type === 'array'
     if (isArray) {

@@ -1,5 +1,4 @@
 var scan = require('./scan')
-scan.htmlfy = require('./htmlfy')
 var document = avalon.document
 var window = avalon.window
 var root = avalon.root
@@ -40,9 +39,11 @@ if (document.readyState === 'complete') {
         doScrollCheck()
     }
 }
+
 if (window.document) {
     avalon.bind(window, 'load', fireReady)
 }
+
 avalon.ready = function (fn) {
     if (!isReady) {
         readyList.push(fn)

@@ -100,6 +100,7 @@ function makeAccessor(sid, spath, heirloom) {
                 if (heirloom !== vm.$events) {
                     get.heirloom = vm.$events
                 }
+               
                 //如果这个属性是组件配置对象中的属性,那么它需要触发组件的回调
                 emitWidget(get.$decompose, spath, val, older)
                 //触发普通属性的回调
@@ -107,7 +108,7 @@ function makeAccessor(sid, spath, heirloom) {
                     $emit(get.heirloom[spath], vm, spath, val, older)
                 }
                 //如果这个属性是数组元素上的属性
-                emitArray(sid, vm, spath, val, older)
+                emitArray(sid+'', vm, spath, val, older)
                 //如果这个属性存在通配符
                 emitWildcard(get.heirloom, vm, spath, val, older)
                 vm.$events.$$dirty$$ = false
@@ -191,6 +192,8 @@ function arrayFactory(array, old, heirloom, options) {
     if (old && old.splice) {
         var args = [0, old.length].concat(array)
         ++avalon.suspendUpdate
+          avalon.callArray =   options.pathname
+       
         old.splice.apply(old, args)
         --avalon.suspendUpdate
         return old
@@ -207,7 +210,9 @@ function arrayFactory(array, old, heirloom, options) {
                         options.pathname + '.' + a
                 vm.$fire(path, b, c)
                 if (!d && !heirloom.$$wait$$ && !avalon.suspendUpdate ) {
+                    avalon.callArray = path
                     batchUpdateView(vm.$id)
+                    delete avalon.callArray 
                 }
             }
         }
