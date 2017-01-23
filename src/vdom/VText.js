@@ -1,22 +1,20 @@
-var rexpr = avalon.config.rexpr
-var decode = require('../strategy/parser/decode')
-function VText(text) {
+import { avalon, document } from '../seed/core'
+
+export function VText(text) {
     this.nodeName = '#text'
     this.nodeValue = text
-    this.skipContent = !rexpr.test(text)
 }
 
 VText.prototype = {
     constructor: VText,
-    toDOM: function () {
-        if(this.dom)
+    toDOM() {
+        /* istanbul ignore if*/
+        if (this.dom)
             return this.dom
-        var v = decode(this.nodeValue)
+        var v = avalon._decode(this.nodeValue)
         return this.dom = document.createTextNode(v)
     },
-    toHTML: function () {
+    toHTML() {
         return this.nodeValue
     }
 }
-
-module.exports = VText

@@ -1,12 +1,11 @@
+import { avalon, isObject, platform} from '../seed/core'
+
 avalon.directive('rules', {
-    diff: function (copy, src, name) {
-        var neo = copy[name]
-        if (neo && Object.prototype.toString.call(neo) === '[object Object]') {
-            src[name] = neo.$model || neo
-            var field = src.dom && src.dom.__ms_duplex__
-            if (field) {
-                field.rules = copy[name]
-            }
+    diff: function (rules) {
+        if (isObject(rules)) {
+            var vdom = this.node
+            vdom.rules = platform.toJson(rules)
+            return true
         }
     }
 })
@@ -28,11 +27,12 @@ function isCorrectDate(value) {
     }
     return false
 }
+//https://github.com/adform/validator.js/blob/master/validator.js
 avalon.shadowCopy(avalon.validators, {
     pattern: {
         message: '必须匹配{{pattern}}这样的格式',
         get: function (value, field, next) {
-            var elem = field.element
+            var elem = field.dom
             var data = field.data
             if (!isRegExp(data.pattern)) {
                 var h5pattern = elem.getAttribute("pattern")
@@ -52,14 +52,21 @@ avalon.shadowCopy(avalon.validators, {
     number: {
         message: '必须数字',
         get: function (value, field, next) {//数值
-            next(isFinite(value))
+            next(!!value && isFinite(value))// isFinite('') --> true
+            return value
+        }
+    },
+    norequired: {
+        message: '',
+        get: function (value, field, next) {
+            next(true)
             return value
         }
     },
     required: {
         message: '必须填写',
         get: function (value, field, next) {
-            next(value !== "")
+            next(value !== '')
             return value
         }
     },
@@ -76,7 +83,7 @@ avalon.shadowCopy(avalon.validators, {
         message: '日期格式不正确',
         get: function (value, field, next) {
             var data = field.data
-            if (avalon.type(data.date) === 'regexp') {
+            if (isRegExp(data.date)) {
                 next(data.date.test(value))
             } else {
                 next(isCorrectDate(value))

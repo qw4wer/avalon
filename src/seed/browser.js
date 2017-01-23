@@ -1,35 +1,29 @@
-var window = global
-var browser = {
-    window: window,
-    document: {//方便在nodejs环境不会报错
-        createElement: function () {
-            return {}
-        },
-        createElementNS: function(){
-            return {}
-        },
-        contains: Boolean
-    },
-    root: {
-        outerHTML: 'x'
-    },
-    msie: NaN,
-    modern: true,
-    avalonDiv: {},
-    avalonFragment: null
+export let win = typeof window === 'object' ? window :
+    typeof global === 'object' ? global : {}
+
+export let inBrowser = !!win.location && win.navigator
+    /* istanbul ignore if  */
+
+
+export let document = inBrowser ? win.document : {
+    createElement: Object,
+    createElementNS: Object,
+    documentElement: 'xx',
+    contains: Boolean
+}
+export var root = inBrowser ? document.documentElement : {
+    outerHTML: 'x'
 }
 
-if(window.location && window.navigator && window.window){
-    var document = window.document
-    browser.document = document
-    browser.modern = window.dispatchEvent
-    browser.root = document.documentElement
-    browser.avalonDiv = document.createElement('div')
-    browser.avalonFragment = document.createDocumentFragment()
-    if (window.VBArray) {
-        browser.msie = document.documentMode || (window.XMLHttpRequest ? 7 : 6)
+let versions = {
+        objectobject: 7, //IE7-8
+        objectundefined: 6, //IE6
+        undefinedfunction: NaN, // other modern browsers
+        undefinedobject: NaN, //Mobile Safari 8.0.0 (iOS 8.4.0) 
+        //objectfunction chrome 47
     }
-}
+    /* istanbul ignore next  */
+export var msie = document.documentMode ||
+    versions[typeof document.all + typeof XMLHttpRequest]
 
-
-module.exports = browser
+export var modern = /NaN|undefined/.test(msie) || msie > 8

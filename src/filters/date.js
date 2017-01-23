@@ -38,6 +38,7 @@ function toInt(str) {
 
 function padNumber(num, digits, trim) {
     var neg = ''
+    /* istanbul ignore if*/
     if (num < 0) {
         neg = '-'
         num = -num
@@ -56,6 +57,7 @@ function dateGetter(name, size, offset, trim) {
         if (offset > 0 || value > -offset)
             value += offset
         if (value === 0 && offset === -12) {
+            /* istanbul ignore next*/
             value = 12
         }
         return padNumber(value, size, trim)
@@ -77,7 +79,6 @@ function timeZoneGetter(date) {
     return paddedZone
 }
 //取得上午下午
-
 function ampmGetter(date, formats) {
     return date.getHours() < 12 ? formats.AMPMS[0] : formats.AMPMS[1]
 }
@@ -107,11 +108,11 @@ var DATE_FORMATS = {
 }
 var rdateFormat = /((?:[^yMdHhmsaZE']+)|(?:'(?:[^']|'')*')|(?:E+|y+|M+|d+|H+|h+|m+|s+|a|Z))(.*)/
 var raspnetjson = /^\/Date\((\d+)\)\/$/
-function dateFilter(date, format) {
+export function dateFilter(date, format) {
     var locate = dateFilter.locate,
-            text = "",
-            parts = [],
-            fn, match
+        text = "",
+        parts = [],
+        fn, match
     format = format || "mediumDate"
     format = locate[format] || format
     if (typeof date === "string") {
@@ -164,11 +165,10 @@ function dateFilter(date, format) {
     if (typeof date === 'number') {
         date = new Date(date)
     }
-    if (avalon.type(date) !== 'date') {
-        return
-    }
+
     while (format) {
         match = rdateFormat.exec(format)
+        /* istanbul ignore else */
         if (match) {
             parts = parts.concat(match.slice(1))
             format = parts.pop()
@@ -233,5 +233,3 @@ var locate = {
 }
 locate.SHORTMONTH = locate.MONTH
 dateFilter.locate = locate
-
-module.exports = dateFilter

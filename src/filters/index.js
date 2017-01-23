@@ -1,50 +1,65 @@
+import {
+    avalon
+} from '../seed/core'
 
-var number = require("./number")
-var sanitize = require("./sanitize")
-var date = require("./date")
-var arrayFilters = require("./array")
-var eventFilters = require("./event")
-var filters = avalon.filters
+import { numberFilter } from "./number"
+import { sanitizeFilter } from "./sanitize"
+import { dateFilter } from "./date"
+import { filterBy, orderBy, selectBy, limitBy } from "./array"
+import { eventFilters } from "./event"
+import { escapeFilter } from "./escape"
+var filters = avalon.filters = {}
 
-function K(a) {
-    return a
-}
-
-avalon.__format__ = function (name) {
-    var fn = filters[name]
-    if (fn) {
-        return fn.get ? fn.get : fn
+avalon.composeFilters = function() {
+    var args = arguments
+    return function(value) {
+        for (var i = 0, arr; arr = args[i++];) {
+            var name = arr[0]
+            var filter = avalon.filters[name]
+            if (typeof filter === 'function') {
+                arr[0] = value
+                try {
+                    value = filter.apply(0, arr)
+                } catch (e) {}
+            }
+        }
+        return value
     }
-    return K
 }
 
+avalon.escapeHtml = escapeFilter
 
 avalon.mix(filters, {
-    uppercase: function (str) {
+    uppercase(str) {
         return String(str).toUpperCase()
     },
-    lowercase: function (str) {
+    lowercase(str) {
         return String(str).toLowerCase()
     },
-    truncate: function (str, length, truncation) {
+    truncate(str, length, end) {
         //length，新字符串长度，truncation，新字符串的结尾的字段,返回新字符串
-        length = length || 30
-        truncation = typeof truncation === "string" ? truncation : "..."
+        if (!str) {
+            return ''
+        }
+        str = String(str)
+        if (isNaN(length)) {
+            length = 30
+        }
+        end = typeof end === "string" ? end : "..."
         return str.length > length ?
-                str.slice(0, length - truncation.length) + truncation :
-                String(str)
+            str.slice(0, length - end.length) + end : /* istanbul ignore else*/
+            str
     },
     camelize: avalon.camelize,
-    date: date,
-    escape: avalon.escapeHtml,
-    sanitize: sanitize,
-    number: number,
-    currency: function (amount, symbol, fractionSize) {
-        return (symbol || "\uFFE5") +
-                number(amount,
-                        isFinite(fractionSize) ? fractionSize : 2)
+    date: dateFilter,
+    escape: escapeFilter,
+    sanitize: sanitizeFilter,
+    number: numberFilter,
+    currency(amount, symbol, fractionSize) {
+        return (symbol || '\u00a5') +
+            numberFilter(amount,
+                isFinite(fractionSize) ? /* istanbul ignore else*/ fractionSize : 2)
     }
-}, arrayFilters, eventFilters)
+}, { filterBy, orderBy, selectBy, limitBy }, eventFilters)
 
-
-module.exports = avalon
+export { avalon }

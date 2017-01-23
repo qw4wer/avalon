@@ -27,13 +27,12 @@
             avalon.component('ms-button', {
                 template: '<button type="button"><span><slot /></span></button>',
                 defaults: {
-                    buttonText: "button",
-                    isShow: false
+                    buttonText: "button"
                 },
                 soleSlot: 'buttonText'
             })
             avalon.component('ms-title', {
-                template: '<p class="title"><slot /><span style="float:right">X</span></p>',
+                template: '<strong class="title"><slot /><span style="float:right">X</span></strong>',
                 defaults: {
                     title: "标题"
                 },
@@ -67,7 +66,6 @@
                     },
                     cbProxy: function (ok) {
                         var cbName = ok ? 'onConfirm' : 'onClose'
-
                         if (this.hasOwnProperty(cbName)) {
                             var ret = this[cbName]()
                             if (ret !== false || (ret && typeof ret.next === 'function')) {
@@ -114,7 +112,7 @@
     <body ms-controller='widget2'>
         <h1>ms-dialog里面包括两个ms-button</h1>
         <p>为了方便外面操作里面的button,dialog组件最好指定它们的配置对象</p>
-    <xmp ms-widget="[{is:'ms-dialog'},@aaa]">
+    <xmp ms-widget="[{is:'ms-dialog',id:'d'},@aaa]">
         <ms-title slot='title'>这是{{@title}}</ms-title>
         <div slot='content'>这是内容</div>
     </xmp>

@@ -1,27 +1,14 @@
+import { avalon, document } from '../seed/core'
 
-function VElement(type, props, children) {
+export function VElement(type, props, children, isVoidTag) {
     this.nodeName = type
     this.props = props
     this.children = children
-
+    this.isVoidTag = isVoidTag
 }
-function skipFalseAndFunction(a) {
-    return a !== false && (Object(a) !== a)
-}
-
-
-function createSVG(type) {
-    return document.createElementNS('http://www.w3.org/2000/svg', type)
-}
-var svgTags = avalon.oneObject('circle,defs,ellipse,image,line,' +
-        'path,polygon,polyline,rect,symbol,text,use,g,svg')
-
-
-var rvml = /^\w+\:\w+/
-var supportTemplate = 'content' in document.createElement('template')
 VElement.prototype = {
     constructor: VElement,
-    toDOM: function () {
+    toDOM() {
         if (this.dom)
             return this.dom
         var dom, tagName = this.nodeName
@@ -31,19 +18,7 @@ VElement.prototype = {
             dom = document.createElement(tagName)
         }
         var props = this.props || {}
-        var wid = props['ms-important'] ||
-                props['ms-controller'] || this.wid
-        if (wid) {
-            var scope = avalon.scopes[wid]
-            var element = scope && scope.vmodel && scope.vmodel.$element
-            if (element) {
-                var oldVdom = element.vtree[0]
-                if (oldVdom.children) {
-                    this.children = oldVdom.children
-                }
-                return element
-            }
-        }
+
         for (var i in props) {
             var val = props[i]
             if (skipFalseAndFunction(val)) {
@@ -54,8 +29,8 @@ VElement.prototype = {
         var template = c[0] ? c[0].nodeValue : ''
         switch (this.nodeName) {
             case 'xmp':
-            case 'script':
             case 'style':
+            case 'script':
             case 'noscript':
                 dom.innerHTML = template
                 break
@@ -63,20 +38,21 @@ VElement.prototype = {
                 if (supportTemplate) {
                     dom.innerHTML = template
                 } else {
+                    /* istanbul ignore next*/
                     dom.textContent = template
                 }
                 break
             default:
-                if (!this.isVoidTag) {
-                    this.children.forEach(function (c) {
-                        c && dom.appendChild(avalon.vdomAdaptor(c, 'toDOM'))
-                    })
+                if (!this.isVoidTag && this.children) {
+                    this.children.forEach(el =>
+                        el && dom.appendChild(avalon.vdom(el, 'toDOM'))
+                    )
                 }
                 break
         }
         return this.dom = dom
     },
-    toHTML: function () {
+    toHTML() {
         var arr = []
         var props = this.props || {}
         for (var i in props) {
@@ -92,12 +68,25 @@ VElement.prototype = {
         }
         str += '>'
         if (this.children) {
-            str += this.children.map(function (c) {
-                return c ? avalon.vdomAdaptor(c, 'toHTML') : ''
-            }).join('')
+            str += this.children.map(el =>
+                (el ? avalon.vdom(el, 'toHTML') : '')
+            ).join('')
         }
         return str + '</' + this.nodeName + '>'
     }
 }
 
-module.exports = VElement
+function skipFalseAndFunction(a) {
+    return a !== false && (Object(a) !== a)
+}
+
+function createSVG(type) {
+    return document.createElementNS('http://www.w3.org/2000/svg', type)
+}
+
+var svgTags = avalon.oneObject('circle,defs,ellipse,image,line,' +
+    'path,polygon,polyline,rect,symbol,text,use,g,svg')
+
+if (avalon.inBrowser) {
+    var supportTemplate = 'content' in document.createElement('template')
+}

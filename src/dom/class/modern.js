@@ -1,6 +1,6 @@
-var rnowhite = /\S+/g
+import { avalon, rnowhite, rword } from '../../seed/core'
 
-'add,remove'.replace(avalon.rword, function (method) {
+'add,remove'.replace(rword, function (method) {
     avalon.fn[method + 'Class'] = function (cls) {
         var el = this[0] || {}
         //https://developer.mozilla.org/zh-CN/docs/Mozilla/Firefox/Releases/26
@@ -13,7 +13,7 @@ var rnowhite = /\S+/g
     }
 })
 
-avalon.fn.mix({
+avalon.shadowCopy(avalon.fn, {
     hasClass: function (cls) {
         var el = this[0] || {}
         //IE10+, chrome8+, firefox3.6+, safari5.1+,opera11.5+支持classList,
